@@ -1,0 +1,160 @@
+/* Mobile optimizations for better touch experience */
+
+/* Improve touch targets for interactive elements */
+@media (max-width: 768px) {
+  /* Increase minimum touch target size */
+  button,
+  [role="button"],
+  input[type="submit"],
+  input[type="button"],
+  .clickable {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve form input spacing */
+  input,
+  select,
+  textarea {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+    padding: 12px;
+  }
+  
+  /* Better spacing for card actions */
+  .card-actions button {
+    padding: 8px 12px;
+  }
+  
+  /* Improve modal padding on mobile */
+  .dialog-content {
+    padding: 16px;
+    margin: 16px;
+  }
+  
+  /* Better table responsiveness */
+  table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  /* Improve dropdown/select visibility */
+  select {
+    background-color: white;
+  }
+  
+  /* Dark mode adjustments */
+  .dark select {
+    background-color: hsl(var(--background));
+  }
+}
+
+/* Prevent text size adjustment on orientation change */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* Improve scrolling on iOS */
+body {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Better focus states for touch devices */
+@media (hover: none) and (pointer: coarse) {
+  button:focus,
+  [role="button"]:focus,
+  input:focus,
+  select:focus,
+  textarea:focus {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
+  }
+}
+
+/* Improve button feedback on touch */
+button:active {
+  transform: scale(0.98);
+  transition: transform 0.1s;
+}
+
+/* Better spacing for mobile lists */
+@media (max-width: 640px) {
+  .space-y-2 > * + * {
+    margin-top: 0.75rem;
+  }
+  
+  .space-y-4 > * + * {
+    margin-top: 1.25rem;
+  }
+  
+  .space-y-6 > * + * {
+    margin-top: 1.75rem;
+  }
+}
+
+/* Improve readability on small screens */
+@media (max-width: 640px) {
+  h1 {
+    font-size: 1.75rem;
+    line-height: 2rem;
+  }
+  
+  h2 {
+    font-size: 1.5rem;
+    line-height: 1.75rem;
+  }
+  
+  h3 {
+    font-size: 1.25rem;
+    line-height: 1.5rem;
+  }
+  
+  .text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  
+  .text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+}
+
+/* Improve form layout on mobile */
+@media (max-width: 768px) {
+  .grid-cols-4.items-center.gap-4 {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .grid-cols-4.items-center.gap-4 > .text-right {
+    text-align: left;
+  }
+}
+
+/* Better modal handling on mobile */
+@media (max-width: 768px) {
+  .dialog-content {
+    width: calc(100vw - 32px);
+    max-height: calc(100vh - 64px);
+  }
+}
+
+/* Improve avatar display on mobile */
+@media (max-width: 640px) {
+  .avatar-sm {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .avatar-md {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .avatar-lg {
+    width: 48px;
+    height: 48px;
+  }
+}

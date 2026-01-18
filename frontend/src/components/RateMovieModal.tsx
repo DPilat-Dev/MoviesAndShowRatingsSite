@@ -59,11 +59,11 @@ export function RateMovieModal({ movieId, movieTitle, onRatingAdded }: RateMovie
     }
   }
 
-  return (
+   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="sm">
-          Rate
+        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Rate movie">
+          <Star className="h-4 w-4" />
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[500px]">

@@ -1,13 +1,14 @@
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Film, Search, Star, Calendar, Eye } from 'lucide-react'
-import { generateYears } from '@/lib/utils'
+import { Film, Star, Calendar, Eye } from 'lucide-react'
 import { AddMovieModal } from '@/components/AddMovieModal'
 import { RateMovieModal } from '@/components/RateMovieModal'
 import { EditMovieModal } from '@/components/EditMovieModal'
 import { ViewMovieRatingsModal } from '@/components/ViewMovieRatingsModal'
+import { MovieDetailsModal } from '@/components/MovieDetailsModal'
+import { EnhancedMovieFilters } from '@/components/EnhancedMovieFilters'
+import { MovieCardSkeleton } from '@/components/Skeleton'
 import { movieApi, rankingApi } from '@/lib/api'
 
 interface Movie {
@@ -56,7 +57,6 @@ interface YearlyStats {
 }
 
 export default function Movies() {
-  const years = generateYears(2020)
   const [movies, setMovies] = useState<Movie[]>([])
   const [movieStats, setMovieStats] = useState<MovieStats | null>(null)
   const [yearlyStats, setYearlyStats] = useState<YearlyStats | null>(null)
@@ -65,23 +65,60 @@ export default function Movies() {
   const [search, setSearch] = useState('')
   const [selectedYear, setSelectedYear] = useState('')
   const [sortBy, setSortBy] = useState('')
+  const [selectedMovie, setSelectedMovie] = useState<Movie | null>(null)
+  const [showMovieDetails, setShowMovieDetails] = useState(false)
+  const [ratingRange, setRatingRange] = useState<[number, number]>([0, 10])
+  const [releaseYearRange, setReleaseYearRange] = useState<[number, number]>([1900, new Date().getFullYear()])
 
   const fetchMovies = useCallback(async () => {
     try {
       setIsLoading(true)
+      
+      // Map frontend sort options to backend sort options
+      let backendSortBy: 'title' | 'year' | 'watchedYear' | 'createdAt' | undefined
+      let backendSortOrder: 'asc' | 'desc' = 'desc'
+      
+      if (sortBy) {
+        if (sortBy.endsWith('_desc')) {
+          backendSortBy = sortBy.replace('_desc', '') as any
+          backendSortOrder = 'desc'
+        } else {
+          backendSortBy = sortBy as any
+          backendSortOrder = 'asc'
+        }
+      }
+      
       const response = await movieApi.getMovies({
         search: search || undefined,
         watchedYear: selectedYear ? parseInt(selectedYear) : undefined,
-        sortBy: sortBy ? sortBy as 'title' | 'year' | 'watchedYear' | 'createdAt' : undefined,
-        sortOrder: 'desc'
+        sortBy: backendSortBy,
+        sortOrder: backendSortOrder
       })
-      setMovies(response.data.data || [])
+      
+      let filteredMovies = response.data.data || []
+      
+      // Apply frontend filters (rating range and release year range)
+      filteredMovies = filteredMovies.filter((movie: Movie) => {
+        // Rating range filter
+        if (movie.averageRating < ratingRange[0] || movie.averageRating > ratingRange[1]) {
+          return false
+        }
+        
+        // Release year range filter
+        if (movie.year < releaseYearRange[0] || movie.year > releaseYearRange[1]) {
+          return false
+        }
+        
+        return true
+      })
+      
+      setMovies(filteredMovies)
     } catch (error) {
       console.error('Failed to fetch movies:', error)
     } finally {
       setIsLoading(false)
     }
-  }, [search, selectedYear, sortBy])
+  }, [search, selectedYear, sortBy, ratingRange, releaseYearRange])
 
   useEffect(() => {
     fetchMovies()
@@ -109,6 +146,10 @@ export default function Movies() {
     fetchStats()
   }
 
+  const hasActiveFilters = Boolean(search || selectedYear || sortBy || 
+    ratingRange[0] > 0 || ratingRange[1] < 10 ||
+    releaseYearRange[0] > 1900 || releaseYearRange[1] < new Date().getFullYear())
+
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -121,63 +162,47 @@ export default function Movies() {
         <AddMovieModal onMovieAdded={handleMovieAdded} />
       </div>
 
-      {/* Filters */}
+      {/* Enhanced Filters */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex flex-col sm:flex-row gap-4">
-             <div className="flex-1">
-               <div className="relative">
-                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                 <Input
-                   placeholder="Search movies..."
-                   className="pl-10"
-                   value={search}
-                   onChange={(e) => setSearch(e.target.value)}
-                   onKeyDown={(e) => e.key === 'Enter' && fetchMovies()}
-                 />
-               </div>
-             </div>
-             <div className="flex gap-2">
-                <select 
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  value={selectedYear}
-                  onChange={(e) => setSelectedYear(e.target.value)}
-                >
-                  <option value="">All Watched Years</option>
-                  {years.map((year) => (
-                    <option key={year} value={year}>{year}</option>
-                  ))}
-                </select>
-               <select 
-                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                 value={sortBy}
-                 onChange={(e) => setSortBy(e.target.value)}
-               >
-                 <option value="">Sort by</option>
-                 <option value="title">Title</option>
-                 <option value="year">Year</option>
-                 <option value="watchedYear">Watched Year</option>
-               </select>
-               <Button onClick={fetchMovies} variant="outline">
-                 Apply
-               </Button>
-             </div>
-          </div>
+          <EnhancedMovieFilters
+            search={search}
+            onSearchChange={setSearch}
+            selectedYear={selectedYear}
+            onYearChange={setSelectedYear}
+            sortBy={sortBy}
+            onSortChange={setSortBy}
+            onApplyFilters={fetchMovies}
+            onClearFilters={() => {
+              setSearch('')
+              setSelectedYear('')
+              setSortBy('')
+              setRatingRange([0, 10])
+              setReleaseYearRange([1900, new Date().getFullYear()])
+              fetchMovies()
+            }}
+            ratingRange={ratingRange}
+            onRatingRangeChange={setRatingRange}
+            releaseYearRange={releaseYearRange}
+            onReleaseYearRangeChange={setReleaseYearRange}
+            hasActiveFilters={hasActiveFilters}
+          />
         </CardContent>
       </Card>
 
        {/* Movies grid */}
-       {isLoading ? (
-         <div className="text-center py-12">
-           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-           <p className="mt-4 text-muted-foreground">Loading movies...</p>
-         </div>
-       ) : movies.length === 0 ? (
+        {isLoading ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <MovieCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : movies.length === 0 ? (
          <div className="text-center py-12 border rounded-lg">
            <Film className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
            <h3 className="text-lg font-semibold">No movies found</h3>
            <p className="text-muted-foreground mt-2">
-             {search || selectedYear ? 'Try changing your search filters' : 'Be the first to add a movie!'}
+             {hasActiveFilters ? 'Try changing your search filters' : 'Be the first to add a movie!'}
            </p>
          </div>
        ) : (
@@ -195,52 +220,72 @@ export default function Movies() {
                    <Film className="h-16 w-16 text-muted-foreground" />
                  )}
                </div>
-               <CardHeader className="pb-3">
-                 <CardTitle className="text-lg">{movie.title}</CardTitle>
-                 <CardDescription className="flex items-center gap-2">
-                   <Calendar className="h-3 w-3" />
-                   <span>{movie.year} • Watched: {movie.watchedYear}</span>
-                 </CardDescription>
-               </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between">
-                     <div className="flex items-center">
-                       <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 mr-1" />
-                       <span className="font-bold">{movie.averageRating > 0 ? `${movie.averageRating}/10` : '-/-'}</span>
-                       <span className="text-sm text-muted-foreground ml-2">
-                         ({movie.totalRankings || 0} ratings)
-                       </span>
-                     </div>
-                      <div className="flex items-center gap-1">
-                        <ViewMovieRatingsModal 
-                          movie={movie}
-                          trigger={
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          }
-                        />
-                        <EditMovieModal 
-                          movie={movie}
-                          onMovieUpdated={() => {
-                            fetchMovies()
-                            fetchStats()
-                          }}
-                          onMovieDeleted={() => {
-                            fetchMovies()
-                            fetchStats()
-                          }}
-                        />
-                        <RateMovieModal 
-                          movieId={movie.id}
-                          movieTitle={movie.title}
-                          onRatingAdded={() => {
-                            fetchMovies()
-                            fetchStats()
-                          }}
-                        />
-                      </div>
-                  </div>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg">{movie.title}</CardTitle>
+                  <CardDescription className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-3 w-3" />
+                      <span>{movie.year} • Watched: {movie.watchedYear}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Star className="h-3 w-3" />
+                      <span>{movie.totalRankings || 0} rating{movie.totalRankings !== 1 ? 's' : ''}</span>
+                    </div>
+                  </CardDescription>
+                </CardHeader>
+                  <CardContent>
+                    <div className="flex items-center justify-between">
+                       <div className="flex items-center">
+                         <Star className="h-5 w-5 text-yellow-500 fill-yellow-500 mr-2" />
+                         <div>
+                           <span className="font-bold text-lg">{movie.averageRating > 0 ? `${movie.averageRating.toFixed(1)}/10` : '-/-'}</span>
+                           <div className="text-xs text-muted-foreground">
+                             Average rating
+                           </div>
+                         </div>
+                       </div>
+                       <div className="flex items-center gap-1">
+                         <Button 
+                           variant="ghost" 
+                           size="sm" 
+                           className="h-8 w-8 p-0"
+                           onClick={() => {
+                             setSelectedMovie(movie)
+                             setShowMovieDetails(true)
+                           }}
+                           title="View movie details"
+                         >
+                           <Film className="h-4 w-4" />
+                         </Button>
+                         <ViewMovieRatingsModal 
+                           movie={movie}
+                           trigger={
+                             <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="View ratings">
+                               <Eye className="h-4 w-4" />
+                             </Button>
+                           }
+                         />
+                         <EditMovieModal 
+                           movie={movie}
+                           onMovieUpdated={() => {
+                             fetchMovies()
+                             fetchStats()
+                           }}
+                           onMovieDeleted={() => {
+                             fetchMovies()
+                             fetchStats()
+                           }}
+                         />
+                         <RateMovieModal 
+                           movieId={movie.id}
+                           movieTitle={movie.title}
+                           onRatingAdded={() => {
+                             fetchMovies()
+                             fetchStats()
+                           }}
+                         />
+                       </div>
+                    </div>
                   {movie.description && (
                     <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
                       {movie.description}
@@ -308,6 +353,15 @@ export default function Movies() {
            )}
          </CardContent>
        </Card>
+
+       {/* Movie Details Modal */}
+       {selectedMovie && (
+         <MovieDetailsModal
+           movie={selectedMovie}
+           open={showMovieDetails}
+           onOpenChange={setShowMovieDetails}
+         />
+       )}
     </div>
   )
 }

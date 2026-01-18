@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Film, Home, Star, Users, LogOut, User, Settings } from 'lucide-react'
 import { useUser } from '@/contexts/UserContext'
 import { DarkModeToggle } from './DarkModeToggle'
+import { getUserAvatar } from '@/utils/avatarUtils'
 
 export default function Layout() {
   const { user, logout } = useUser()
@@ -25,9 +26,24 @@ export default function Layout() {
                 <Film className="h-8 w-8 text-primary" />
                 <span className="text-xl font-bold">Bosnia Movie Rankings</span>
               </Link>
-              <div className="hidden md:flex items-center space-x-1">
-                <span className="text-sm text-muted-foreground">Welcome,</span>
-                <span className="font-medium">{user.displayName}</span>
+              <div className="hidden md:flex items-center space-x-2">
+                <img 
+                  src={getUserAvatar(user)} 
+                  alt={user.displayName}
+                  className="h-8 w-8 rounded-full border border-border object-cover"
+                />
+                <div>
+                  <div className="text-sm text-muted-foreground">Welcome back,</div>
+                  <div className="font-medium">{user.displayName}</div>
+                </div>
+              </div>
+              {/* Mobile user info */}
+              <div className="md:hidden flex items-center">
+                <img 
+                  src={getUserAvatar(user)} 
+                  alt={user.displayName}
+                  className="h-8 w-8 rounded-full border border-border object-cover"
+                />
               </div>
             </div>
              <div className="flex items-center gap-2">

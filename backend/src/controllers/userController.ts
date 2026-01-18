@@ -27,6 +27,7 @@ export const getUsers = async (req: Request, res: Response) => {
           id: true,
           username: true,
           displayName: true,
+          avatarUrl: true,
           isActive: true,
           createdAt: true,
           _count: {
@@ -69,6 +70,7 @@ export const getUserById = async (req: Request, res: Response) => {
         id: true,
         username: true,
         displayName: true,
+        avatarUrl: true,
         isActive: true,
         createdAt: true,
         rankings: {
@@ -131,6 +133,7 @@ export const createUser = async (req: Request, res: Response) => {
         id: true,
         username: true,
         displayName: true,
+        avatarUrl: true,
         isActive: true,
         createdAt: true,
       },
@@ -167,6 +170,7 @@ export const updateUser = async (req: Request, res: Response) => {
         id: true,
         username: true,
         displayName: true,
+        avatarUrl: true,
         isActive: true,
         createdAt: true,
       },

@@ -1,0 +1,45 @@
+# Backend-specific gitignore
+# This supplements the root .gitignore
+
+# Prisma
+*.db
+*.db-journal
+prisma/migrations/
+!prisma/migrations/migration_lock.toml
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+logs/
+
+# Build output
+dist/
+.out/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage/
+*.lcov
+.nyc_output
+
+# Dependencies
+node_modules/
+
+# Editor
+.vscode/
+.idea/
+*.iml
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db

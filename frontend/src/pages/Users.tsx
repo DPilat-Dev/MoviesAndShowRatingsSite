@@ -6,11 +6,14 @@ import { Users as UsersIcon, Search, Star, Calendar, TrendingUp, GitCompare, Eye
 import { userApi } from '@/lib/api'
 import { CompareUsersModal } from '@/components/CompareUsersModal'
 import { ViewUserRatingsModal } from '@/components/ViewUserRatingsModal'
+import { UserCardSkeleton } from '@/components/Skeleton'
+import { getUserAvatar } from '@/utils/avatarUtils'
 
 interface User {
   id: string
   username: string
   displayName: string
+  avatarUrl?: string
   isActive: boolean
   createdAt: string
   _count?: {
@@ -111,12 +114,13 @@ export default function Users() {
       </Card>
 
        {/* Users grid */}
-       {isLoading ? (
-         <div className="text-center py-12">
-           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-           <p className="mt-4 text-muted-foreground">Loading users...</p>
-         </div>
-       ) : users.length === 0 ? (
+        {isLoading ? (
+          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <UserCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : users.length === 0 ? (
          <div className="text-center py-12 border rounded-lg">
            <UsersIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
            <h3 className="text-lg font-semibold">No users found</h3>
@@ -129,15 +133,17 @@ export default function Users() {
            {users.map((user) => (
              <Card key={user.id} className="hover:shadow-lg transition-shadow">
                <CardHeader className="pb-3">
-                 <div className="flex items-center space-x-4">
-                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-                     <span className="font-bold text-lg">{user.displayName.charAt(0)}</span>
-                   </div>
-                   <div>
-                     <CardTitle className="text-lg">{user.displayName}</CardTitle>
-                     <CardDescription>@{user.username}</CardDescription>
-                   </div>
-                 </div>
+                  <div className="flex items-center space-x-4">
+                    <img 
+                      src={getUserAvatar(user)} 
+                      alt={user.displayName}
+                      className="h-12 w-12 rounded-full border border-border object-cover"
+                    />
+                    <div>
+                      <CardTitle className="text-lg">{user.displayName}</CardTitle>
+                      <CardDescription>@{user.username}</CardDescription>
+                    </div>
+                  </div>
                </CardHeader>
                <CardContent>
                  <div className="space-y-3">

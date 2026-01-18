@@ -3,11 +3,13 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Users, Star, Film, TrendingUp } from 'lucide-react'
 import { rankingApi } from '@/lib/api'
+import { getUserAvatar } from '@/utils/avatarUtils'
 
 interface User {
   id: string
   username: string
   displayName: string
+  avatarUrl?: string
 }
 
 interface MovieRanking {
@@ -235,15 +237,17 @@ export function CompareUsersModal({ users, trigger, initialUser }: CompareUsersM
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <Card className="p-4 border">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/20">
-                        <span className="font-bold">{user1Data.user.displayName.charAt(0)}</span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{user1Data.user.displayName}</h3>
-                        <p className="text-sm text-muted-foreground">@{user1Data.user.username}</p>
-                      </div>
-                    </div>
+                     <div className="flex items-center space-x-3">
+                       <img 
+                         src={getUserAvatar(user1Data.user)} 
+                         alt={user1Data.user.displayName}
+                         className="h-10 w-10 rounded-full border border-blue-200 dark:border-blue-800 object-cover"
+                       />
+                       <div>
+                         <h3 className="font-semibold">{user1Data.user.displayName}</h3>
+                         <p className="text-sm text-muted-foreground">@{user1Data.user.username}</p>
+                       </div>
+                     </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">
@@ -271,15 +275,17 @@ export function CompareUsersModal({ users, trigger, initialUser }: CompareUsersM
 
                 <Card className="p-4 border">
                   <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/20">
-                        <span className="font-bold">{user2Data.user.displayName.charAt(0)}</span>
-                      </div>
-                      <div>
-                        <h3 className="font-semibold">{user2Data.user.displayName}</h3>
-                        <p className="text-sm text-muted-foreground">@{user2Data.user.username}</p>
-                      </div>
-                    </div>
+                     <div className="flex items-center space-x-3">
+                       <img 
+                         src={getUserAvatar(user2Data.user)} 
+                         alt={user2Data.user.displayName}
+                         className="h-10 w-10 rounded-full border border-green-200 dark:border-green-800 object-cover"
+                       />
+                       <div>
+                         <h3 className="font-semibold">{user2Data.user.displayName}</h3>
+                         <p className="text-sm text-muted-foreground">@{user2Data.user.username}</p>
+                       </div>
+                     </div>
                   </div>
                   
                   <div className="grid grid-cols-2 gap-4">

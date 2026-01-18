@@ -46,7 +46,7 @@ export const userApi = {
   createUser: (data: { username: string; displayName?: string }) =>
     api.post('/users', data),
   
-  updateUser: (id: string, data: { username?: string; displayName?: string; isActive?: boolean }) =>
+  updateUser: (id: string, data: { username?: string; displayName?: string; avatarUrl?: string; isActive?: boolean }) =>
     api.put(`/users/${id}`, data),
   
   deleteUser: (id: string) =>

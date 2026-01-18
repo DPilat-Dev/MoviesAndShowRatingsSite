@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Film, Star, Users, TrendingUp, Calendar, Loader2 } from 'lucide-react'
+import { Film, Star, Users, TrendingUp, Calendar } from 'lucide-react'
 import { movieApi, rankingApi, userApi } from '@/lib/api'
 import { ViewMovieRatingsModal } from '@/components/ViewMovieRatingsModal'
 import { useCallback } from 'react'
+import { getUserAvatar } from '@/utils/avatarUtils'
+import { DashboardSkeleton } from '@/components/Skeleton'
 
 interface DashboardStats {
   totalMovies: number
@@ -28,6 +30,7 @@ interface RecentActivity {
     id: string
     username: string
     displayName: string
+    avatarUrl?: string
   }
   movie: {
     id: string
@@ -132,11 +135,7 @@ export default function Dashboard() {
   }, [selectedYear, fetchDashboardData])
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    )
+    return <DashboardSkeleton />
   }
 
   return (
@@ -273,21 +272,23 @@ export default function Dashboard() {
           <CardContent>
             <div className="space-y-4">
               {recentActivity.map((activity) => (
-                <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-                    <Users className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm">
-                      <span className="font-medium">{activity.user.displayName}</span> rated{' '}
-                      <span className="font-medium">"{activity.movie.title}"</span> with{' '}
-                      <span className="font-bold">{activity.rating}/10</span>
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {new Date(activity.rankedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                </div>
+                 <div key={activity.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-muted">
+                   <img 
+                     src={getUserAvatar(activity.user)} 
+                     alt={activity.user.displayName}
+                     className="h-8 w-8 rounded-full border border-border object-cover"
+                   />
+                   <div className="flex-1">
+                     <p className="text-sm">
+                       <span className="font-medium">{activity.user.displayName}</span> rated{' '}
+                       <span className="font-medium">"{activity.movie.title}"</span> with{' '}
+                       <span className="font-bold">{activity.rating}/10</span>
+                     </p>
+                     <p className="text-xs text-muted-foreground mt-1">
+                       {new Date(activity.rankedAt).toLocaleDateString()}
+                     </p>
+                   </div>
+                 </div>
               ))}
             </div>
           </CardContent>

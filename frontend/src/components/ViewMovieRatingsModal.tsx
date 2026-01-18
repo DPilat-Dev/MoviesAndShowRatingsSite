@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Star, Users, Eye, TrendingUp } from 'lucide-react'
 import { rankingApi } from '@/lib/api'
+import { getUserAvatar } from '@/utils/avatarUtils'
 
 interface Movie {
   id: string
@@ -21,6 +22,7 @@ interface MovieRating {
     id: string
     username: string
     displayName: string
+    avatarUrl?: string
   }
 }
 
@@ -228,17 +230,19 @@ export function ViewMovieRatingsModal({ movie, trigger }: ViewMovieRatingsModalP
                  <div key={rating.id} className="p-4 border rounded-lg hover:bg-muted/50">
                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                      <div className="flex-1">
-                       <div className="flex items-center gap-3">
-                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                           <span className="font-bold">{rating.user.displayName.charAt(0)}</span>
-                         </div>
-                         <div>
-                           <div className="font-medium">{rating.user.displayName}</div>
-                           <div className="text-sm text-muted-foreground">
-                             @{rating.user.username} • Rated on {new Date(rating.rankedAt).toLocaleDateString()}
-                           </div>
-                         </div>
-                       </div>
+                        <div className="flex items-center gap-3">
+                          <img 
+                            src={getUserAvatar(rating.user)} 
+                            alt={rating.user.displayName}
+                            className="h-10 w-10 rounded-full border border-border object-cover"
+                          />
+                          <div>
+                            <div className="font-medium">{rating.user.displayName}</div>
+                            <div className="text-sm text-muted-foreground">
+                              @{rating.user.username} • Rated on {new Date(rating.rankedAt).toLocaleDateString()}
+                            </div>
+                          </div>
+                        </div>
                      </div>
                      
                      <div className="flex items-center gap-4">

@@ -6,6 +6,7 @@ import { Star, TrendingUp, Calendar, Users } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { rankingApi } from '@/lib/api'
 import { ViewMovieRatingsModal } from '@/components/ViewMovieRatingsModal'
+import { getUserAvatar } from '@/utils/avatarUtils'
 
 interface YearlyStats {
   year: number
@@ -26,6 +27,8 @@ interface TopMovie {
 interface UserActivity {
   id: string
   name: string
+  username: string
+  avatarUrl?: string
   rankings: number
   avgRating: number
 }
@@ -62,6 +65,7 @@ interface ApiRanking {
     id: string
     username: string
     displayName: string
+    avatarUrl?: string
   }
 }
 
@@ -69,6 +73,7 @@ interface ApiActiveUser {
   id: string
   username: string
   displayName: string
+  avatarUrl?: string
   totalRankings: number
   averageRating: number
 }
@@ -170,17 +175,25 @@ export default function Rankings() {
 
       // Calculate user activity from activeUsers in API response if available
       if (rankingsResponse.data.activeUsers && rankingsResponse.data.activeUsers.length > 0) {
-        const apiUserActivity = rankingsResponse.data.activeUsers.slice(0, 5).map((user: ApiActiveUser) => ({
-          id: user.id,
-          name: user.displayName || user.username,
-          rankings: user.totalRankings || 0,
-          avgRating: user.averageRating || 0
-        }))
+         const apiUserActivity = rankingsResponse.data.activeUsers.slice(0, 5).map((user: ApiActiveUser) => ({
+           id: user.id,
+           name: user.displayName || user.username,
+           username: user.username,
+           avatarUrl: user.avatarUrl,
+           rankings: user.totalRankings || 0,
+           avgRating: user.averageRating || 0
+         }))
         setUserActivity(apiUserActivity)
       } else {
         // Fallback to calculation
         const rankings = rankingsResponse.data.data || []
-        const userRatings: Record<string, { sum: number; count: number; name: string }> = {}
+        const userRatings: Record<string, { 
+          sum: number; 
+          count: number; 
+          name: string;
+          username: string;
+          avatarUrl?: string;
+        }> = {}
         
         rankings.forEach((ranking: ApiRanking) => {
           if (ranking.user) {
@@ -189,7 +202,9 @@ export default function Rankings() {
               userRatings[userId] = {
                 sum: 0,
                 count: 0,
-                name: ranking.user.displayName || ranking.user.username
+                name: ranking.user.displayName || ranking.user.username,
+                username: ranking.user.username,
+                avatarUrl: ranking.user.avatarUrl
               }
             }
             userRatings[userId].sum += ranking.rating
@@ -201,6 +216,8 @@ export default function Rankings() {
           .map(([id, data]) => ({
             id,
             name: data.name,
+            username: data.username,
+            avatarUrl: data.avatarUrl,
             rankings: data.count,
             avgRating: data.sum / data.count
           }))
@@ -371,18 +388,20 @@ export default function Rankings() {
                   <div className="space-y-4">
                     {userActivity.map((user) => (
                       <div key={user.id} className="flex items-center justify-between p-3 rounded-lg hover:bg-muted">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                            <span className="font-bold text-sm">{user.name.charAt(0)}</span>
-                          </div>
-                          <div>
-                            <p className="font-medium">{user.name}</p>
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                              <TrendingUp className="h-3 w-3" />
-                              <span>{user.rankings} ranking{user.rankings !== 1 ? 's' : ''}</span>
-                            </div>
-                          </div>
-                        </div>
+                         <div className="flex items-center space-x-4">
+                           <img 
+                             src={getUserAvatar({ username: user.username, avatarUrl: user.avatarUrl })} 
+                             alt={user.name}
+                             className="h-10 w-10 rounded-full border border-border object-cover"
+                           />
+                           <div>
+                             <p className="font-medium">{user.name}</p>
+                             <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                               <TrendingUp className="h-3 w-3" />
+                               <span>{user.rankings} ranking{user.rankings !== 1 ? 's' : ''}</span>
+                             </div>
+                           </div>
+                         </div>
                         <div className="flex items-center">
                           <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 mr-1" />
                           <span className="font-bold">{user.avgRating.toFixed(1)}</span>

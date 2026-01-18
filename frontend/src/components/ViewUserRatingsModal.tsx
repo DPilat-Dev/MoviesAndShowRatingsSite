@@ -3,11 +3,13 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Star, Film, Calendar, Eye, TrendingUp } from 'lucide-react'
 import { rankingApi } from '@/lib/api'
+import { getUserAvatar } from '@/utils/avatarUtils'
 
 interface User {
   id: string
   username: string
   displayName: string
+  avatarUrl?: string
 }
 
 interface MovieRanking {
@@ -169,10 +171,19 @@ export function ViewUserRatingsModal({ user, trigger }: ViewUserRatingsModalProp
       </DialogTrigger>
       <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{user.displayName}'s Movie Ratings</DialogTitle>
-          <DialogDescription>
-            @{user.username} • {stats.totalRankings} total ratings
-          </DialogDescription>
+          <div className="flex items-center gap-3 mb-2">
+            <img 
+              src={getUserAvatar(user)} 
+              alt={user.displayName}
+              className="h-12 w-12 rounded-full border border-border object-cover"
+            />
+            <div>
+              <DialogTitle>{user.displayName}'s Movie Ratings</DialogTitle>
+              <DialogDescription>
+                @{user.username} • {stats.totalRankings} total ratings
+              </DialogDescription>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
