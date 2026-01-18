@@ -1,0 +1,83 @@
+version: '3.8'
+
+# Bosnia Movie Rankings - Production Setup
+# Based on working docker-compose.dev.yml but optimized for production
+# No nginx included - use with Nginx Proxy Manager
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: bosnia-movie-db-prod
+    environment:
+      POSTGRES_USER: movierankings
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: movierankings
+    ports:
+      - "5432:5432"  # Expose for external access if needed
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U movierankings"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.production
+    container_name: bosnia-movie-backend-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://movierankings:${POSTGRES_PASSWORD}@postgres:5432/movierankings
+      NODE_ENV: production
+      PORT: 5000
+      JWT_SECRET: ${JWT_SECRET}
+      # CORS settings for your domain
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    ports:
+      - "5000:5000"  # Expose backend API
+    restart: unless-stopped
+    command: sh -c "npx prisma db push && node dist/index.js"
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.production
+    container_name: bosnia-movie-frontend-prod
+    depends_on:
+      - backend
+    environment:
+      # Build-time environment variables
+      VITE_API_URL: ${VITE_API_URL:-http://localhost:5000}
+      VITE_OMDB_API_KEY: ${VITE_OMDB_API_KEY:-}
+      VITE_APP_NAME: ${VITE_APP_NAME:-"Bosnia Movie Rankings"}
+      VITE_ENABLE_DARK_MODE: ${VITE_ENABLE_DARK_MODE:-"true"}
+    ports:
+      - "3000:80"  # Expose frontend
+    restart: unless-stopped
+
+  # Optional: Prisma Studio for database management
+  # prisma-studio:
+  #   image: node:18-alpine
+  #   container_name: bosnia-movie-prisma-studio-prod
+  #   depends_on:
+  #     - postgres
+  #   working_dir: /app
+  #   environment:
+  #     DATABASE_URL: postgresql://movierankings:${POSTGRES_PASSWORD}@postgres:5432/movierankings
+  #   volumes:
+  #     - ./backend:/app
+  #   ports:
+  #     - "5555:5555"
+  #   command: npx prisma studio --port 5555 --browser none
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data_prod:

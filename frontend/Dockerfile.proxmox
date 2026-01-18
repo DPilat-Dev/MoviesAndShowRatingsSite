@@ -1,0 +1,42 @@
+# Production Dockerfile for Proxmox LXC
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy source code
+COPY . .
+
+# Build application with environment variables
+ARG VITE_API_URL
+ARG VITE_OMDB_API_KEY
+ARG VITE_APP_NAME
+ARG VITE_ENABLE_DARK_MODE
+
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_OMDB_API_KEY=${VITE_OMDB_API_KEY}
+ENV VITE_APP_NAME=${VITE_APP_NAME}
+ENV VITE_ENABLE_DARK_MODE=${VITE_ENABLE_DARK_MODE}
+
+RUN npm run build
+
+# Create a simple stage to copy files to volume
+FROM alpine:latest
+
+WORKDIR /app
+
+# Copy built application
+COPY --from=builder /app/dist ./dist
+
+# Create a simple script to copy files to volume
+RUN echo '#!/bin/sh' > /entrypoint.sh && \
+    echo 'cp -r /app/dist/* /usr/share/nginx/html/' >> /entrypoint.sh && \
+    echo 'echo "Static files copied to volume"' >> /entrypoint.sh && \
+    chmod +x /entrypoint.sh
+
+ENTRYPOINT ["/entrypoint.sh"]

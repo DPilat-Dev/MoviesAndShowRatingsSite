@@ -23,6 +23,7 @@ const getUsers = async (req, res) => {
                     id: true,
                     username: true,
                     displayName: true,
+                    avatarUrl: true,
                     isActive: true,
                     createdAt: true,
                     _count: {
@@ -63,6 +64,7 @@ const getUserById = async (req, res) => {
                 id: true,
                 username: true,
                 displayName: true,
+                avatarUrl: true,
                 isActive: true,
                 createdAt: true,
                 rankings: {
@@ -119,6 +121,7 @@ const createUser = async (req, res) => {
                 id: true,
                 username: true,
                 displayName: true,
+                avatarUrl: true,
                 isActive: true,
                 createdAt: true,
             },
@@ -135,6 +138,14 @@ const updateUser = async (req, res) => {
     try {
         const { id } = req.params;
         const data = req.body;
+        if (data.username) {
+            const existingUser = await prisma.user.findUnique({
+                where: { username: data.username },
+            });
+            if (existingUser && existingUser.id !== id) {
+                return res.status(409).json({ error: 'Username already taken' });
+            }
+        }
         const user = await prisma.user.update({
             where: { id },
             data,
@@ -142,6 +153,7 @@ const updateUser = async (req, res) => {
                 id: true,
                 username: true,
                 displayName: true,
+                avatarUrl: true,
                 isActive: true,
                 createdAt: true,
             },
@@ -150,8 +162,13 @@ const updateUser = async (req, res) => {
     }
     catch (error) {
         console.error('Error updating user:', error);
-        if (error instanceof Error && error.message.includes('Record to update not found')) {
-            return res.status(404).json({ error: 'User not found' });
+        if (error instanceof Error) {
+            if (error.message.includes('Record to update not found')) {
+                return res.status(404).json({ error: 'User not found' });
+            }
+            if (error.message.includes('Unique constraint failed')) {
+                return res.status(409).json({ error: 'Username already taken' });
+            }
         }
         return res.status(500).json({ error: 'Failed to update user' });
     }

@@ -1,0 +1,146 @@
+version: "3.8"
+
+# Production environment variables should be set in .env.production file
+# Required environment variables:
+# - POSTGRES_PASSWORD
+# - JWT_SECRET
+# - VITE_OMDB_API_KEY (optional for movie details)
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: bosnia-movie-db-prod
+    environment:
+      POSTGRES_USER: movierankings
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: movierankings
+    volumes:
+      - postgres_data_prod:/var/lib/postgresql/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U movierankings"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.prod
+    container_name: bosnia-movie-backend-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: postgresql://movierankings:${POSTGRES_PASSWORD}@postgres:5432/movierankings
+      JWT_SECRET: ${JWT_SECRET}
+      # Optional: Add rate limiting in production
+      RATE_LIMIT_WINDOW_MS: 900000  # 15 minutes
+      RATE_LIMIT_MAX_REQUESTS: 100
+    ports:
+      - "5000:5000"
+    networks:
+      - app-network
+    restart: unless-stopped
+    command: sh -c "npx prisma migrate deploy && node dist/index.js"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Frontend with Nginx
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.prod
+    container_name: bosnia-movie-frontend-prod
+    depends_on:
+      - backend
+    environment:
+      # Build-time environment variables (used during build)
+      VITE_API_URL: /api
+      VITE_OMDB_API_KEY: ${VITE_OMDB_API_KEY:-}
+      VITE_APP_NAME: "Bosnia Movie Rankings"
+      VITE_ENABLE_DARK_MODE: "true"
+    ports:
+      - "80:80"
+      - "443:443"  # For HTTPS if you add SSL
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Nginx reverse proxy (if you want to handle SSL termination)
+  # nginx-proxy:
+  #   image: nginx:stable-alpine
+  #   container_name: bosnia-movie-nginx-prod
+  #   depends_on:
+  #     - frontend
+  #     - backend
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/prod.conf:/etc/nginx/nginx.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro  # For SSL certificates
+  #   networks:
+  #     - app-network
+  #   restart: unless-stopped
+
+volumes:
+  postgres_data_prod:
+    driver: local
+
+networks:
+  app-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

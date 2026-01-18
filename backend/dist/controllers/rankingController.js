@@ -139,6 +139,7 @@ const createRanking = async (req, res) => {
                 movieId: data.movieId,
                 rating: data.rating,
                 rankingYear: data.rankingYear,
+                description: data.description,
             },
             include: {
                 user: {

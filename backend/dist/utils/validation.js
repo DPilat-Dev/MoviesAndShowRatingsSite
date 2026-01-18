@@ -7,7 +7,9 @@ exports.createUserSchema = zod_1.z.object({
     displayName: zod_1.z.string().min(1).max(100).optional(),
 });
 exports.updateUserSchema = zod_1.z.object({
+    username: zod_1.z.string().min(3).max(50).regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores').optional(),
     displayName: zod_1.z.string().min(1).max(100).optional(),
+    avatarUrl: zod_1.z.string().url().optional().or(zod_1.z.literal('')),
     isActive: zod_1.z.boolean().optional(),
 });
 exports.createMovieSchema = zod_1.z.object({

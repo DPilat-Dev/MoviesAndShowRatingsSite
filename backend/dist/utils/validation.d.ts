@@ -10,13 +10,19 @@ export declare const createUserSchema: z.ZodObject<{
     displayName?: string | undefined;
 }>;
 export declare const updateUserSchema: z.ZodObject<{
+    username: z.ZodOptional<z.ZodString>;
     displayName: z.ZodOptional<z.ZodString>;
+    avatarUrl: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
     isActive: z.ZodOptional<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
+    username?: string | undefined;
     displayName?: string | undefined;
+    avatarUrl?: string | undefined;
     isActive?: boolean | undefined;
 }, {
+    username?: string | undefined;
     displayName?: string | undefined;
+    avatarUrl?: string | undefined;
     isActive?: boolean | undefined;
 }>;
 export declare const createMovieSchema: z.ZodObject<{
