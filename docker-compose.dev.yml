@@ -36,6 +36,7 @@ services:
       PRISMA_QUERY_ENGINE_BINARY: /app/node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node
       RATE_LIMIT_WINDOW_MS: 900000
       RATE_LIMIT_MAX_REQUESTS: 10000
+      TMDB_API_KEY: 804eb32a97427ede2862e377f4573aff
     ports:
       - "5000:5000"
     volumes:
@@ -53,6 +54,7 @@ services:
       - backend
     environment:
       VITE_API_URL: http://localhost:5000
+      VITE_OMDB_API_KEY: f4b35707
     ports:
       - "3000:3000"
     volumes:

@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Plus, Search, Loader2, AlertCircle, CheckCircle } from 'lucide-react'
 import { movieApi } from '@/lib/api'
 import { useUser } from '@/contexts/UserContext'
-import { omdbService, type OMDBError } from '@/services/omdbService'
+import { omdbService, type OMDBError, type OMDBMovie } from '@/services/omdbService'
 
 interface AddMovieModalProps {
   onMovieAdded?: () => void
@@ -21,7 +21,7 @@ export function AddMovieModal({ onMovieAdded }: AddMovieModalProps) {
 
   const [formData, setFormData] = useState({
     title: '',
-    year: new Date().getFullYear(),
+    year: 0, // Start with 0 (no year) instead of current year
     description: '',
     posterUrl: '',
     watchedYear: new Date().getFullYear(),
@@ -30,7 +30,7 @@ export function AddMovieModal({ onMovieAdded }: AddMovieModalProps) {
   const [fetchingOMDB, setFetchingOMDB] = useState(false)
   const [omdbError, setOmdbError] = useState('')
   const [omdbSuccess, setOmdbSuccess] = useState('')
-  const [omdbData, setOmdbData] = useState<any>(null)
+  const [omdbData, setOmdbData] = useState<OMDBMovie | null>(null)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -41,10 +41,10 @@ export function AddMovieModal({ onMovieAdded }: AddMovieModalProps) {
       return
     }
 
-    if (!formData.year || formData.year < 1888) { // First movie year
-      setError('Please enter a valid year')
-      return
-    }
+     if (!formData.year || formData.year < 1888) { // First movie year
+       setError('Please enter a valid year (1888 or later). You can use the search button to automatically fill the year from OMDB.')
+       return
+     }
 
     if (!formData.watchedYear || formData.watchedYear < 2000) {
       setError('Please enter a valid watched year')
@@ -69,13 +69,6 @@ export function AddMovieModal({ onMovieAdded }: AddMovieModalProps) {
       })
 
       setOpen(false)
-      setFormData({
-        title: '',
-        year: new Date().getFullYear(),
-        description: '',
-        posterUrl: '',
-        watchedYear: new Date().getFullYear(),
-      })
       
        resetForm()
        setOpen(false)
@@ -112,10 +105,11 @@ export function AddMovieModal({ onMovieAdded }: AddMovieModalProps) {
     setOmdbData(null)
 
     try {
-      const result = await omdbService.getMovieByTitle(formData.title, formData.year)
+      // Only use year filter if user has entered a valid year (not 0)
+      const result = await omdbService.getMovieByTitle(formData.title, formData.year || undefined)
       
       if (result.Response === 'True') {
-        const movieData = result as any
+        const movieData = result as OMDBMovie
         
         // Update form with OMDB data
         setFormData(prev => ({
@@ -139,19 +133,19 @@ export function AddMovieModal({ onMovieAdded }: AddMovieModalProps) {
     }
   }
 
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      year: new Date().getFullYear(),
-      description: '',
-      posterUrl: '',
-      watchedYear: new Date().getFullYear(),
-    })
-    setOmdbData(null)
-    setOmdbError('')
-    setOmdbSuccess('')
-    setError('')
-  }
+   const resetForm = () => {
+     setFormData({
+       title: '',
+       year: 0,
+       description: '',
+       posterUrl: '',
+       watchedYear: new Date().getFullYear(),
+     })
+     setOmdbData(null)
+     setOmdbError('')
+     setOmdbSuccess('')
+     setError('')
+   }
 
   const handleOpenChange = (open: boolean) => {
     setOpen(open)
@@ -282,17 +276,17 @@ export function AddMovieModal({ onMovieAdded }: AddMovieModalProps) {
               <Label htmlFor="year" className="text-right">
                 Year *
               </Label>
-              <Input
-                id="year"
-                name="year"
-                type="number"
-                value={formData.year}
-                onChange={handleChange}
-                className="col-span-3"
-                min="1888"
-                max={new Date().getFullYear() + 5}
-                required
-              />
+               <Input
+                 id="year"
+                 name="year"
+                 type="number"
+                 value={formData.year || ''}
+                 onChange={handleChange}
+                 className="col-span-3"
+                 min="1888"
+                 max={new Date().getFullYear() + 5}
+                 placeholder="Year (optional)"
+               />
             </div>
 
             <div className="grid grid-cols-4 items-center gap-4">

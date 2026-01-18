@@ -263,7 +263,7 @@ export default function Movies() {
                 </div>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">{movie.title}</CardTitle>
-                  <CardDescription className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+                  <div className="text-sm text-muted-foreground flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-3 w-3" />
                       <span>{movie.year} • Watched: {movie.watchedYear}</span>
@@ -272,7 +272,7 @@ export default function Movies() {
                       <Star className="h-3 w-3" />
                       <span>{movie.totalRankings || 0} rating{movie.totalRankings !== 1 ? 's' : ''}</span>
                     </div>
-                  </CardDescription>
+                  </div>
                 </CardHeader>
                   <CardContent>
                     <div className="flex items-center justify-between">

@@ -132,7 +132,8 @@ export function EditMovieModal({ movie, onMovieUpdated, onMovieDeleted }: EditMo
     setOmdbData(null)
 
     try {
-      const result = await omdbService.getMovieByTitle(formData.title, formData.year)
+       // Only use year filter if year is set
+       const result = await omdbService.getMovieByTitle(formData.title, formData.year || undefined)
       
       if (result.Response === 'True') {
         const movieData = result as any

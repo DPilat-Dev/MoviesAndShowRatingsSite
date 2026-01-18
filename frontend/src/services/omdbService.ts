@@ -58,7 +58,7 @@ class OMDBServices {
   private baseUrl = 'https://www.omdbapi.com'
 
   constructor() {
-    this.apiKey = (import.meta as any).env?.VITE_OMDB_API_KEY || ''
+    this.apiKey = import.meta.env.VITE_OMDB_API_KEY || ''
   }
 
   /**
@@ -110,11 +110,13 @@ class OMDBServices {
       params.append('y', year.toString())
     }
 
+    const url = `${this.baseUrl}/?${params}`
+
     try {
-      const response = await fetch(`${this.baseUrl}/?${params}`)
-      return await response.json()
+      const response = await fetch(url)
+      const data = await response.json()
+      return data
     } catch (error) {
-      console.error('OMDB API get movie error:', error)
       return {
         Response: 'False',
         Error: 'Failed to fetch data from OMDB API'
@@ -166,8 +168,7 @@ class OMDBServices {
   /**
    * Get movie poster with fallback logic
    * 1. Try local posterUrl
-   * 2. Try fetching from OMDB
-   * 3. Use placeholder
+   * 2. Use placeholder (skip OMDB to avoid API limits)
    */
   async getMoviePoster(title: string, year?: number, localPosterUrl?: string | null): Promise<string> {
     // 1. Use local poster if available
@@ -175,22 +176,7 @@ class OMDBServices {
       return localPosterUrl
     }
 
-    // 2. Try to fetch from OMDB if API is configured
-    if (this.isConfigured()) {
-      try {
-        const result = await this.getMovieByTitle(title, year)
-        if (result.Response === 'True') {
-          const movieResult = result as OMDBMovie
-          if (movieResult.Poster && movieResult.Poster !== 'N/A') {
-            return movieResult.Poster
-          }
-        }
-      } catch (error) {
-        console.warn('Failed to fetch poster from OMDB:', error)
-      }
-    }
-
-    // 3. Fallback to placeholder
+    // 2. Fallback to placeholder (skip OMDB to avoid API limits)
     return this.getPlaceholderPoster()
   }
 

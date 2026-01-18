@@ -12,8 +12,9 @@ import {
   Award, 
   BookOpen, 
   ExternalLink,
-  AlertCircle,
-  Loader2
+   AlertCircle,
+  Loader2,
+  Search
 } from 'lucide-react'
 import { omdbService, type OMDBMovie, type OMDBError } from '@/services/omdbService'
 import { movieApi } from '@/lib/api'
@@ -53,8 +54,9 @@ export function MovieDetailsModal({ movie, open, onOpenChange }: MovieDetailsMod
 
   useEffect(() => {
     if (open && movie) {
-      fetchMovieDetails()
       fetchLocalStats()
+      // Don't auto-fetch OMDB details to avoid API limits
+      // User can click "Load OMDB Details" button if needed
     }
   }, [open, movie])
 
@@ -68,7 +70,7 @@ export function MovieDetailsModal({ movie, open, onOpenChange }: MovieDetailsMod
     setError(null)
     
     try {
-      const result = await omdbService.getMovieByTitle(movie.title, movie.year)
+       const result = await omdbService.getMovieByTitle(movie.title, movie.year || undefined)
       
       if (result.Response === 'True') {
         setOmdbData(result as OMDBMovie)
@@ -399,8 +401,25 @@ export function MovieDetailsModal({ movie, open, onOpenChange }: MovieDetailsMod
               {!loading && !error && !omdbData && omdbService.isConfigured() && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Film className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Movie details not available from OMDB</p>
-                  <p className="text-sm mt-2">Try searching with exact title and year</p>
+                  <p>Movie details not loaded from OMDB</p>
+                  <p className="text-sm mt-2 mb-4">Click below to load enhanced details (uses API call)</p>
+                  <Button 
+                    onClick={fetchMovieDetails}
+                    disabled={loading}
+                    className="mt-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <Search className="h-4 w-4 mr-2" />
+                        Load OMDB Details
+                      </>
+                    )}
+                  </Button>
                 </div>
               )}
 
