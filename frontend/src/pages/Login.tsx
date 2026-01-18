@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Film } from 'lucide-react'
 import { userApi } from '@/lib/api'
+import { useUser } from '@/contexts/UserContext'
 
 export default function Login() {
   const [username, setUsername] = useState('')
@@ -13,6 +14,7 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
   const navigate = useNavigate()
+  const { login } = useUser()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -34,13 +36,13 @@ export default function Login() {
       
       const user = response.data
       
-      // Store user in localStorage
-      localStorage.setItem('user', JSON.stringify({
+      // Use UserContext login function
+      login({
         id: user.id,
         username: user.username,
         displayName: user.displayName,
         isNew: !displayName,
-      }))
+      })
       
       navigate('/')
     } catch (error: unknown) {
@@ -51,14 +53,15 @@ export default function Login() {
         const axiosError = error as { response?: { status?: number; data?: { error?: string } } }
         
         if (axiosError.response?.status === 409) {
-        // Create a temporary user object - the real data will be fetched when app loads
+        // Create a temporary user object - the real data will be fetched by UserContext
         const tempUser = {
-          id: `temp-${username}`, // Temporary ID, will be replaced when real user is fetched
+          id: `temp-${username}`, // Temporary ID, will be replaced with real user data
           username,
           displayName: displayName || username,
         }
         
-        localStorage.setItem('user', JSON.stringify(tempUser))
+        // Use UserContext login function (it will fetch real user data)
+        login(tempUser)
         navigate('/')
       } else if (axiosError.response?.data?.error) {
         setError(axiosError.response.data.error)
