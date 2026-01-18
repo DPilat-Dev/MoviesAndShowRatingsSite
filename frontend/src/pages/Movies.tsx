@@ -10,6 +10,7 @@ import { MovieDetailsModal } from '@/components/MovieDetailsModal'
 import { EnhancedMovieFilters } from '@/components/EnhancedMovieFilters'
 import { MovieCardSkeleton } from '@/components/Skeleton'
 import { movieApi, rankingApi } from '@/lib/api'
+import { omdbService } from '@/services/omdbService'
 
 interface Movie {
   id: string
@@ -58,6 +59,7 @@ interface YearlyStats {
 
 export default function Movies() {
   const [movies, setMovies] = useState<Movie[]>([])
+  const [moviePosters, setMoviePosters] = useState<Record<string, string>>({})
   const [movieStats, setMovieStats] = useState<MovieStats | null>(null)
   const [yearlyStats, setYearlyStats] = useState<YearlyStats | null>(null)
   const [isLoading, setIsLoading] = useState(true)
@@ -113,12 +115,47 @@ export default function Movies() {
       })
       
       setMovies(filteredMovies)
+      
+      // Fetch posters for movies without local posters
+      fetchMoviePosters(filteredMovies)
     } catch (error) {
       console.error('Failed to fetch movies:', error)
     } finally {
       setIsLoading(false)
     }
   }, [search, selectedYear, sortBy, ratingRange, releaseYearRange])
+
+  const fetchMoviePosters = async (moviesList: Movie[]) => {
+    const newPosters: Record<string, string> = {}
+    
+    // Process movies in batches to avoid overwhelming the API
+    const batchSize = 5
+    for (let i = 0; i < moviesList.length; i += batchSize) {
+      const batch = moviesList.slice(i, i + batchSize)
+      
+      await Promise.all(
+        batch.map(async (movie) => {
+          // Only fetch if we don't already have a poster for this movie
+          if (!moviePosters[movie.id]) {
+            try {
+              const posterUrl = await omdbService.getMoviePoster(
+                movie.title,
+                movie.year,
+                movie.posterUrl
+              )
+              newPosters[movie.id] = posterUrl
+            } catch (error) {
+              console.warn(`Failed to fetch poster for ${movie.title}:`, error)
+              newPosters[movie.id] = omdbService.getPlaceholderPoster()
+            }
+          }
+        })
+      )
+    }
+    
+    // Update posters state
+    setMoviePosters(prev => ({ ...prev, ...newPosters }))
+  }
 
   useEffect(() => {
     fetchMovies()
@@ -141,8 +178,8 @@ export default function Movies() {
     }
   }
 
-  const handleMovieAdded = () => {
-    fetchMovies()
+  const handleMovieAdded = async () => {
+    await fetchMovies()
     fetchStats()
   }
 
@@ -209,17 +246,21 @@ export default function Movies() {
          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
            {movies.map((movie) => (
              <Card key={movie.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-               <div className="aspect-[2/3] bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 flex items-center justify-center">
-                 {movie.posterUrl ? (
-                   <img 
-                     src={movie.posterUrl} 
-                     alt={movie.title}
-                     className="w-full h-full object-cover"
-                   />
-                 ) : (
-                   <Film className="h-16 w-16 text-muted-foreground" />
-                 )}
-               </div>
+                <div className="aspect-[2/3] bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 flex items-center justify-center overflow-hidden">
+                  {moviePosters[movie.id] ? (
+                    <img 
+                      src={moviePosters[movie.id]} 
+                      alt={movie.title}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // If image fails to load, show placeholder
+                        e.currentTarget.src = omdbService.getPlaceholderPoster()
+                      }}
+                    />
+                  ) : (
+                    <Film className="h-16 w-16 text-muted-foreground" />
+                  )}
+                </div>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg">{movie.title}</CardTitle>
                   <CardDescription className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">

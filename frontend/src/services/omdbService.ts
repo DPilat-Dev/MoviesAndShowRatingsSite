@@ -164,6 +164,37 @@ class OMDBServices {
   }
 
   /**
+   * Get movie poster with fallback logic
+   * 1. Try local posterUrl
+   * 2. Try fetching from OMDB
+   * 3. Use placeholder
+   */
+  async getMoviePoster(title: string, year?: number, localPosterUrl?: string | null): Promise<string> {
+    // 1. Use local poster if available
+    if (localPosterUrl) {
+      return localPosterUrl
+    }
+
+    // 2. Try to fetch from OMDB if API is configured
+    if (this.isConfigured()) {
+      try {
+        const result = await this.getMovieByTitle(title, year)
+        if (result.Response === 'True') {
+          const movieResult = result as OMDBMovie
+          if (movieResult.Poster && movieResult.Poster !== 'N/A') {
+            return movieResult.Poster
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to fetch poster from OMDB:', error)
+      }
+    }
+
+    // 3. Fallback to placeholder
+    return this.getPlaceholderPoster()
+  }
+
+  /**
    * Format movie runtime (e.g., "142 min" -> "2h 22m")
    */
   formatRuntime(runtime: string): string {
