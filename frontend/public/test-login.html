@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Login</title>
+    <script>
+        async function testLogin() {
+            const username = document.getElementById('username').value;
+            const displayName = document.getElementById('displayName').value || username;
+            
+            try {
+                const response = await fetch('/api/users', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        username: username,
+                        displayName: displayName
+                    })
+                });
+                
+                if (response.ok) {
+                    const user = await response.json();
+                    localStorage.setItem('user', JSON.stringify({
+                        id: user.id,
+                        username: user.username,
+                        displayName: user.displayName
+                    }));
+                    document.getElementById('result').innerHTML = 
+                        `<div style="color: green;">✅ User created successfully!<br>
+                         ID: ${user.id}<br>
+                         Username: ${user.username}<br>
+                         Display Name: ${user.displayName}<br>
+                         <br>User saved to localStorage. You can now go to <a href="/">the main app</a>.</div>`;
+                } else {
+                    const error = await response.text();
+                    document.getElementById('result').innerHTML = 
+                        `<div style="color: red;">❌ Error: ${response.status} ${response.statusText}<br>${error}</div>`;
+                }
+            } catch (error) {
+                document.getElementById('result').innerHTML = 
+                    `<div style="color: red;">❌ Network error: ${error.message}</div>`;
+            }
+        }
+        
+        function checkLocalStorage() {
+            const user = localStorage.getItem('user');
+            if (user) {
+                document.getElementById('storage').innerHTML = 
+                    `<div style="color: blue;">📦 localStorage has user: ${user}</div>`;
+            } else {
+                document.getElementById('storage').innerHTML = 
+                    `<div style="color: orange;">📦 No user in localStorage</div>`;
+            }
+        }
+        
+        function clearLocalStorage() {
+            localStorage.removeItem('user');
+            checkLocalStorage();
+        }
+        
+        // Check localStorage on load
+        window.onload = checkLocalStorage;
+    </script>
+</head>
+<body>
+    <h1>Test Login Directly</h1>
+    
+    <div>
+        <h3>Current localStorage:</h3>
+        <div id="storage"></div>
+        <button onclick="checkLocalStorage()">Refresh</button>
+        <button onclick="clearLocalStorage()">Clear</button>
+    </div>
+    
+    <hr>
+    
+    <div>
+        <h3>Create User:</h3>
+        <label>Username: <input type="text" id="username" value="testuser2"></label><br>
+        <label>Display Name: <input type="text" id="displayName" placeholder="Optional"></label><br>
+        <button onclick="testLogin()">Create User</button>
+    </div>
+    
+    <div id="result" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc;"></div>
+    
+    <hr>
+    
+    <div>
+        <h3>Test Links:</h3>
+        <ul>
+            <li><a href="/">Main App</a> (requires login)</li>
+            <li><a href="/login">Login Page</a></li>
+            <li><a href="/api/users">API: List Users</a></li>
+            <li><a href="/api">API Documentation</a></li>
+        </ul>
+    </div>
+</body>
+</html>

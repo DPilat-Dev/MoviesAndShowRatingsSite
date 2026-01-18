@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.compat
+    container_name: bosnia-movie-backend
+    environment:
+      DATABASE_URL: file:/app/data/dev.db
+      NODE_ENV: production
+      PORT: 5000
+      JWT_SECRET: ${JWT_SECRET:-your-production-secret-key}
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - backend_data:/app/data
+    command: sh -c "npx prisma db push && node dist/index.js"
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: bosnia-movie-frontend
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:5000
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+  # Prisma Studio (optional - for database management)
+  prisma-studio:
+    image: node:18-alpine
+    container_name: bosnia-movie-prisma-studio
+    depends_on:
+      - postgres
+    working_dir: /app
+    environment:
+      DATABASE_URL: postgresql://movierankings:movierankings123@postgres:5432/movierankings
+    volumes:
+      - ./backend:/app
+    ports:
+      - "5555:5555"
+    command: npx prisma studio --port 5555 --browser none
+
+volumes:
+  postgres_data:
+  backend_data:

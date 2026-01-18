@@ -1,0 +1,10 @@
+
+> bosnia-movie-rankings-backend@1.0.0 dev
+> tsx watch src/index.ts
+
+🚀 Server running on port 5000
+📊 Health check: http://localhost:5000/health
+🔗 API: http://localhost:5000/api
+👥 Users API: http://localhost:5000/api/users
+🎬 Movies API: http://localhost:5000/api/movies
+⭐ Rankings API: http://localhost:5000/api/rankings

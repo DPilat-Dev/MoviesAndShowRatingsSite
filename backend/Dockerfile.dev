@@ -1,0 +1,27 @@
+FROM node:18-slim
+
+WORKDIR /app
+
+# Install OpenSSL 1.1 and other required libraries
+RUN apt-get update && apt-get install -y \
+    openssl \
+    libssl1.1 \
+    ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY package*.json ./
+COPY prisma ./prisma/
+
+# Install all dependencies (including dev)
+RUN npm install
+
+# Generate Prisma client with explicit binary target
+RUN npx prisma generate --no-engine
+
+# Copy source code
+COPY . .
+
+EXPOSE 5000
+
+CMD ["npm", "run", "dev"]

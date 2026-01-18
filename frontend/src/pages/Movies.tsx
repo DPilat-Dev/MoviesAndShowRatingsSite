@@ -1,0 +1,313 @@
+import { useState, useEffect, useCallback } from 'react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Film, Search, Star, Calendar, Eye } from 'lucide-react'
+import { generateYears } from '@/lib/utils'
+import { AddMovieModal } from '@/components/AddMovieModal'
+import { RateMovieModal } from '@/components/RateMovieModal'
+import { EditMovieModal } from '@/components/EditMovieModal'
+import { ViewMovieRatingsModal } from '@/components/ViewMovieRatingsModal'
+import { movieApi, rankingApi } from '@/lib/api'
+
+interface Movie {
+  id: string
+  title: string
+  year: number
+  description: string | null
+  posterUrl: string | null
+  watchedYear: number
+  addedBy: string
+  createdAt: string
+  averageRating: number
+  totalRankings: number
+  _count?: {
+    rankings: number
+  }
+}
+
+interface MovieStats {
+  overall: {
+    totalMovies: number
+    averageWatchedYear: string
+    oldestWatchedYear: number
+    newestWatchedYear: number
+    uniqueWatchedYears: number
+    averageRating: number
+  }
+  byWatchedYear: Array<{
+    year: number
+    count: number
+  }>
+}
+
+interface YearlyStats {
+  yearRange: {
+    min: number
+    max: number
+  }
+  yearlyStats: Array<{
+    year: number
+    totalRankings: number
+    averageRating: number
+    uniqueUsers: number
+    uniqueMovies: number
+  }>
+}
+
+export default function Movies() {
+  const years = generateYears(2020)
+  const [movies, setMovies] = useState<Movie[]>([])
+  const [movieStats, setMovieStats] = useState<MovieStats | null>(null)
+  const [yearlyStats, setYearlyStats] = useState<YearlyStats | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isStatsLoading, setIsStatsLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [selectedYear, setSelectedYear] = useState('')
+  const [sortBy, setSortBy] = useState('')
+
+  const fetchMovies = useCallback(async () => {
+    try {
+      setIsLoading(true)
+      const response = await movieApi.getMovies({
+        search: search || undefined,
+        watchedYear: selectedYear ? parseInt(selectedYear) : undefined,
+        sortBy: sortBy ? sortBy as 'title' | 'year' | 'watchedYear' | 'createdAt' : undefined,
+        sortOrder: 'desc'
+      })
+      setMovies(response.data.data || [])
+    } catch (error) {
+      console.error('Failed to fetch movies:', error)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [search, selectedYear, sortBy])
+
+  useEffect(() => {
+    fetchMovies()
+    fetchStats()
+  }, [fetchMovies])
+
+  const fetchStats = async () => {
+    try {
+      setIsStatsLoading(true)
+      const [movieStatsResponse, yearlyStatsResponse] = await Promise.all([
+        movieApi.getMovieStats(),
+        rankingApi.getYearlyStats()
+      ])
+      setMovieStats(movieStatsResponse.data)
+      setYearlyStats(yearlyStatsResponse.data)
+    } catch (error) {
+      console.error('Failed to fetch stats:', error)
+    } finally {
+      setIsStatsLoading(false)
+    }
+  }
+
+  const handleMovieAdded = () => {
+    fetchMovies()
+    fetchStats()
+  }
+
+  return (
+    <div className="space-y-8">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Movies</h1>
+          <p className="text-muted-foreground">
+            Browse and manage all movies in the collection
+          </p>
+        </div>
+        <AddMovieModal onMovieAdded={handleMovieAdded} />
+      </div>
+
+      {/* Filters */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row gap-4">
+             <div className="flex-1">
+               <div className="relative">
+                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                 <Input
+                   placeholder="Search movies..."
+                   className="pl-10"
+                   value={search}
+                   onChange={(e) => setSearch(e.target.value)}
+                   onKeyDown={(e) => e.key === 'Enter' && fetchMovies()}
+                 />
+               </div>
+             </div>
+             <div className="flex gap-2">
+                <select 
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(e.target.value)}
+                >
+                  <option value="">All Watched Years</option>
+                  {years.map((year) => (
+                    <option key={year} value={year}>{year}</option>
+                  ))}
+                </select>
+               <select 
+                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                 value={sortBy}
+                 onChange={(e) => setSortBy(e.target.value)}
+               >
+                 <option value="">Sort by</option>
+                 <option value="title">Title</option>
+                 <option value="year">Year</option>
+                 <option value="watchedYear">Watched Year</option>
+               </select>
+               <Button onClick={fetchMovies} variant="outline">
+                 Apply
+               </Button>
+             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+       {/* Movies grid */}
+       {isLoading ? (
+         <div className="text-center py-12">
+           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+           <p className="mt-4 text-muted-foreground">Loading movies...</p>
+         </div>
+       ) : movies.length === 0 ? (
+         <div className="text-center py-12 border rounded-lg">
+           <Film className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+           <h3 className="text-lg font-semibold">No movies found</h3>
+           <p className="text-muted-foreground mt-2">
+             {search || selectedYear ? 'Try changing your search filters' : 'Be the first to add a movie!'}
+           </p>
+         </div>
+       ) : (
+         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+           {movies.map((movie) => (
+             <Card key={movie.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+               <div className="aspect-[2/3] bg-gradient-to-br from-blue-100 to-purple-100 dark:from-blue-900/20 dark:to-purple-900/20 flex items-center justify-center">
+                 {movie.posterUrl ? (
+                   <img 
+                     src={movie.posterUrl} 
+                     alt={movie.title}
+                     className="w-full h-full object-cover"
+                   />
+                 ) : (
+                   <Film className="h-16 w-16 text-muted-foreground" />
+                 )}
+               </div>
+               <CardHeader className="pb-3">
+                 <CardTitle className="text-lg">{movie.title}</CardTitle>
+                 <CardDescription className="flex items-center gap-2">
+                   <Calendar className="h-3 w-3" />
+                   <span>{movie.year} • Watched: {movie.watchedYear}</span>
+                 </CardDescription>
+               </CardHeader>
+                <CardContent>
+                  <div className="flex items-center justify-between">
+                     <div className="flex items-center">
+                       <Star className="h-4 w-4 text-yellow-500 fill-yellow-500 mr-1" />
+                       <span className="font-bold">{movie.averageRating > 0 ? `${movie.averageRating}/10` : '-/-'}</span>
+                       <span className="text-sm text-muted-foreground ml-2">
+                         ({movie.totalRankings || 0} ratings)
+                       </span>
+                     </div>
+                      <div className="flex items-center gap-1">
+                        <ViewMovieRatingsModal 
+                          movie={movie}
+                          trigger={
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          }
+                        />
+                        <EditMovieModal 
+                          movie={movie}
+                          onMovieUpdated={() => {
+                            fetchMovies()
+                            fetchStats()
+                          }}
+                          onMovieDeleted={() => {
+                            fetchMovies()
+                            fetchStats()
+                          }}
+                        />
+                        <RateMovieModal 
+                          movieId={movie.id}
+                          movieTitle={movie.title}
+                          onRatingAdded={() => {
+                            fetchMovies()
+                            fetchStats()
+                          }}
+                        />
+                      </div>
+                  </div>
+                  {movie.description && (
+                    <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
+                      {movie.description}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Added by {movie.addedBy}
+                  </p>
+                </CardContent>
+             </Card>
+           ))}
+         </div>
+       )}
+
+       {/* Stats */}
+       <Card>
+         <CardHeader>
+           <CardTitle>Movie Statistics</CardTitle>
+           <CardDescription>
+             Overview of movie collection and rankings
+           </CardDescription>
+         </CardHeader>
+         <CardContent>
+           {isStatsLoading ? (
+             <div className="text-center py-8">
+               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
+               <p className="mt-2 text-muted-foreground">Loading statistics...</p>
+             </div>
+           ) : (
+             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+               {movieStats && (
+                 <div className="p-4 border rounded-lg">
+                   <div className="text-2xl font-bold">{movieStats.overall.totalMovies}</div>
+                   <div className="text-sm text-muted-foreground">Total Movies</div>
+                   <div className="flex items-center mt-2">
+                     <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 mr-1" />
+                     <span className="text-sm">Avg: {movieStats.overall.averageRating}/10</span>
+                   </div>
+                 </div>
+               )}
+               {movieStats && (
+                 <div className="p-4 border rounded-lg">
+                   <div className="text-2xl font-bold">{movieStats.overall.uniqueWatchedYears}</div>
+                   <div className="text-sm text-muted-foreground">Watched Years</div>
+                    <div className="text-sm text-muted-foreground mt-2">
+                      {movieStats.overall.oldestWatchedYear} - {movieStats.overall.newestWatchedYear}
+                    </div>
+                 </div>
+               )}
+               {yearlyStats && yearlyStats.yearlyStats.length > 0 && (
+                 <>
+                   {yearlyStats.yearlyStats.slice(0, 2).map((stat) => (
+                     <div key={stat.year} className="p-4 border rounded-lg">
+                       <div className="text-2xl font-bold">{stat.totalRankings}</div>
+                       <div className="text-sm text-muted-foreground">Rankings in {stat.year}</div>
+                       <div className="flex items-center mt-2">
+                         <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 mr-1" />
+                         <span className="text-sm">Avg: {stat.averageRating.toFixed(1)}/10</span>
+                       </div>
+                     </div>
+                   ))}
+                 </>
+               )}
+             </div>
+           )}
+         </CardContent>
+       </Card>
+    </div>
+  )
+}
