@@ -170,7 +170,7 @@ class OMDBServices {
    * 1. Try local posterUrl
    * 2. Use placeholder (skip OMDB to avoid API limits)
    */
-  async getMoviePoster(title: string, year?: number, localPosterUrl?: string | null): Promise<string> {
+  async getMoviePoster(_title: string, _year?: number, localPosterUrl?: string | null): Promise<string> {
     // 1. Use local poster if available
     if (localPosterUrl) {
       return localPosterUrl
