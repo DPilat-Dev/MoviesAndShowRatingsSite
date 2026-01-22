@@ -35,7 +35,7 @@ services:
     ports:
       - "5000:5000"
     restart: unless-stopped
-    command: sh -c "npx prisma db push && npm start"
+    command: sh -c "npx prisma db push && npm run db:seed && npm start"
 
   # Frontend
   frontend:
