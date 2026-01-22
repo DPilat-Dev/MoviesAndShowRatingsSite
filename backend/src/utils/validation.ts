@@ -31,6 +31,17 @@ export const updateMovieSchema = z.object({
   watchedYear: z.number().int().min(2000).max(new Date().getFullYear()).optional(),
 })
 
+export const bulkUpdateMovieSchema = z.object({
+  movieIds: z.array(z.string().min(1)).min(1),
+  metadata: z.object({
+    description: z.string().max(1000).optional(),
+    posterUrl: z.string().url().optional().or(z.literal('')),
+    year: z.number().int().min(1900).max(new Date().getFullYear() + 5).optional(),
+  }).refine(data => Object.keys(data).length > 0, {
+    message: 'Metadata must contain at least one field to update'
+  })
+})
+
 // Ranking validation schemas
 export const createRankingSchema = z.object({
   userId: z.string().min(1),
@@ -73,6 +84,7 @@ export type CreateUserInput = z.infer<typeof createUserSchema>
 export type UpdateUserInput = z.infer<typeof updateUserSchema>
 export type CreateMovieInput = z.infer<typeof createMovieSchema>
 export type UpdateMovieInput = z.infer<typeof updateMovieSchema>
+export type BulkUpdateMovieInput = z.infer<typeof bulkUpdateMovieSchema>
 export type CreateRankingInput = z.infer<typeof createRankingSchema>
 export type UpdateRankingInput = z.infer<typeof updateRankingSchema>
 export type MovieQueryInput = z.infer<typeof movieQuerySchema>

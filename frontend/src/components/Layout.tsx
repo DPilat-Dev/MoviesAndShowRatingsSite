@@ -1,4 +1,4 @@
-import { Outlet, Link } from 'react-router-dom'
+import { Outlet, Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Film, Home, Star, Users, LogOut, User, Settings } from 'lucide-react'
 import { useUser } from '@/contexts/UserContext'
@@ -7,12 +7,15 @@ import { getUserAvatar } from '@/utils/avatarUtils'
 
 export default function Layout() {
   const { user, logout } = useUser()
+  const navigate = useNavigate()
 
   const handleLogout = () => {
     logout()
+    navigate('/login')
   }
 
   if (!user) {
+    navigate('/login')
     return null
   }
 

@@ -1,16 +1,15 @@
-# Multi-stage build for production
-FROM node:18-alpine AS builder
+FROM node:18-alpine
+
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
 
 WORKDIR /app
-
-# Install dependencies for Prisma
-RUN apk add --no-cache openssl
 
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies (production only)
+# Install dependencies
 RUN npm ci --only=production
 
 # Generate Prisma client
@@ -22,39 +21,6 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
-# Production stage
-FROM node:18-alpine
-
-WORKDIR /app
-
-# Install runtime dependencies
-RUN apk add --no-cache openssl
-
-# Copy package files
-COPY package*.json ./
-COPY prisma ./prisma/
-
-# Install production dependencies only
-RUN npm ci --only=production
-
-# Copy built application from builder stage
-COPY --from=builder /app/dist ./dist
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
-
-# Change ownership to non-root user
-RUN chown -R nodejs:nodejs /app
-
-# Switch to non-root user
-USER nodejs
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-  CMD curl -f http://localhost:5000/api/health || exit 1
-
 EXPOSE 5000
 
-CMD ["node", "dist/index.js"]
+CMD ["npm", "start"]

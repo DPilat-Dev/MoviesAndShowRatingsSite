@@ -14,7 +14,9 @@ import {
   ExternalLink,
    AlertCircle,
   Loader2,
-  Search
+  Search,
+  RefreshCw,
+  CheckCircle
 } from 'lucide-react'
 import { omdbService, type OMDBMovie, type OMDBError } from '@/services/omdbService'
 import { movieApi } from '@/lib/api'
@@ -41,7 +43,9 @@ interface MovieDetailsModalProps {
 export function MovieDetailsModal({ movie, open, onOpenChange }: MovieDetailsModalProps) {
   const [omdbData, setOmdbData] = useState<OMDBMovie | null>(null)
   const [loading, setLoading] = useState(false)
+  const [updating, setUpdating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [updateSuccess, setUpdateSuccess] = useState<string | null>(null)
   const [localStats, setLocalStats] = useState<{
     averageRating: number
     totalRankings: number
@@ -55,6 +59,10 @@ export function MovieDetailsModal({ movie, open, onOpenChange }: MovieDetailsMod
   useEffect(() => {
     if (open && movie) {
       fetchLocalStats()
+      // Reset OMDB data when movie changes
+      setOmdbData(null)
+      setError(null)
+      setUpdateSuccess(null)
       // Don't auto-fetch OMDB details to avoid API limits
       // User can click "Load OMDB Details" button if needed
     }
@@ -68,21 +76,105 @@ export function MovieDetailsModal({ movie, open, onOpenChange }: MovieDetailsMod
 
     setLoading(true)
     setError(null)
+    setUpdateSuccess(null)
     
     try {
-       const result = await omdbService.getMovieByTitle(movie.title, movie.year || undefined)
+      const result = await omdbService.getMovieByTitle(movie.title, movie.year || undefined)
       
       if (result.Response === 'True') {
         setOmdbData(result as OMDBMovie)
       } else {
         const errorResult = result as OMDBError
-        setError(errorResult.Error || 'Movie not found in OMDB database')
+        // Provide more user-friendly error messages
+        let errorMessage = errorResult.Error || 'Movie not found in OMDB database'
+        
+        if (errorMessage.includes('API key')) {
+          errorMessage = 'OMDB API key not configured. Please add VITE_OMDB_API_KEY to your .env file.'
+        } else if (errorMessage.includes('rate limit')) {
+          errorMessage = 'OMDB API rate limit exceeded. Please try again in a few minutes.'
+        } else if (errorMessage.includes('internet connection')) {
+          errorMessage = 'Unable to connect to OMDB API. Please check your internet connection.'
+        }
+        
+        setError(errorMessage)
       }
     } catch (err) {
       console.error('Error fetching movie details:', err)
-      setError('Failed to fetch movie details')
+      setError('An unexpected error occurred while fetching movie details.')
     } finally {
       setLoading(false)
+    }
+  }
+
+  const updateMovieMetadata = async () => {
+    if (!omdbService.isConfigured()) {
+      setError('OMDB API key not configured. Cannot update metadata.')
+      return
+    }
+
+    setUpdating(true)
+    setError(null)
+    setUpdateSuccess(null)
+    
+    try {
+      // First fetch OMDB data
+      const result = await omdbService.getMovieByTitle(movie.title, movie.year || undefined)
+      
+      if (result.Response === 'True') {
+        const omdbMovie = result as OMDBMovie
+        
+        // Prepare update data
+        const updateData: any = {}
+        
+        // Update description if available and different
+        if (omdbMovie.Plot && omdbMovie.Plot !== 'N/A' && omdbMovie.Plot !== movie.description) {
+          updateData.description = omdbMovie.Plot
+        }
+        
+        // Update poster if available and different
+        if (omdbMovie.Poster && omdbMovie.Poster !== 'N/A' && omdbMovie.Poster !== movie.posterUrl) {
+          updateData.posterUrl = omdbMovie.Poster
+        }
+        
+        // Update year if different (but be careful with this)
+        const omdbYear = omdbMovie.Year && omdbMovie.Year !== 'N/A' ? parseInt(omdbMovie.Year) : null
+        if (omdbYear && omdbYear !== movie.year) {
+          updateData.year = omdbYear
+        }
+        
+        // Only update if there are changes
+        if (Object.keys(updateData).length > 0) {
+          await movieApi.updateMovie(movie.id, updateData)
+          setUpdateSuccess('Movie metadata updated successfully!')
+          
+          // Refresh OMDB data display
+          setOmdbData(omdbMovie)
+          
+          // Refresh local stats
+          fetchLocalStats()
+        } else {
+          setUpdateSuccess('Movie metadata is already up to date.')
+        }
+      } else {
+        const errorResult = result as OMDBError
+        // Provide more user-friendly error messages
+        let errorMessage = errorResult.Error || 'Movie not found in OMDB database'
+        
+        if (errorMessage.includes('API key')) {
+          errorMessage = 'OMDB API key not configured. Please add VITE_OMDB_API_KEY to your .env file.'
+        } else if (errorMessage.includes('rate limit')) {
+          errorMessage = 'OMDB API rate limit exceeded. Please try again in a few minutes.'
+        } else if (errorMessage.includes('internet connection')) {
+          errorMessage = 'Unable to connect to OMDB API. Please check your internet connection.'
+        }
+        
+        setError(errorMessage)
+      }
+    } catch (err) {
+      console.error('Error updating movie metadata:', err)
+      setError('An unexpected error occurred while updating movie metadata.')
+    } finally {
+      setUpdating(false)
     }
   }
 
@@ -102,13 +194,19 @@ export function MovieDetailsModal({ movie, open, onOpenChange }: MovieDetailsMod
   }
 
   const getPosterUrl = () => {
-    if (omdbData?.Poster && omdbData.Poster !== 'N/A') {
-      return omdbData.Poster
+    try {
+      if (omdbData?.Poster && omdbData.Poster !== 'N/A') {
+        return omdbData.Poster
+      }
+      if (movie.posterUrl && movie.posterUrl.trim() !== '') {
+        return movie.posterUrl
+      }
+      return omdbService.generateTempPoster(movie.title, movie.year)
+    } catch (error) {
+      console.error('Error generating poster URL:', error)
+      // Fallback to a simple placeholder
+      return 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMGYxNzJhIi8+PHRleHQgeD0iMTUwIiB5PSIyMjUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5NGEzYjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyMCIgZm9udC13ZWlnaHQ9ImJvbGQiPk1vdmllIFBvc3RlcjwvdGV4dD48L3N2Zz4='
     }
-    if (movie.posterUrl) {
-      return movie.posterUrl
-    }
-    return omdbService.getPlaceholderPoster()
   }
 
   const formatGenres = (genres: string) => {
@@ -138,18 +236,28 @@ export function MovieDetailsModal({ movie, open, onOpenChange }: MovieDetailsMod
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Error message */}
-          {error && (
-            <div className="p-4 border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 rounded-lg">
-              <div className="flex items-center">
-                <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mr-2" />
-                <span className="text-amber-800 dark:text-amber-300">{error}</span>
-              </div>
-              <p className="text-sm text-amber-700 dark:text-amber-400 mt-2">
-                Note: To enable OMDB integration, add your API key to .env file as VITE_OMDB_API_KEY
-              </p>
-            </div>
-          )}
+           {/* Success message */}
+           {updateSuccess && (
+             <div className="p-4 border border-green-200 bg-green-50 dark:bg-green-900/20 dark:border-green-800 rounded-lg">
+               <div className="flex items-center">
+                 <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mr-2" />
+                 <span className="text-green-800 dark:text-green-300">{updateSuccess}</span>
+               </div>
+             </div>
+           )}
+
+           {/* Error message */}
+           {error && (
+             <div className="p-4 border border-amber-200 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 rounded-lg">
+               <div className="flex items-center">
+                 <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 mr-2" />
+                 <span className="text-amber-800 dark:text-amber-300">{error}</span>
+               </div>
+               <p className="text-sm text-amber-700 dark:text-amber-400 mt-2">
+                 Note: To enable OMDB integration, add your API key to .env file as VITE_OMDB_API_KEY
+               </p>
+             </div>
+           )}
 
           {/* Loading state */}
           {loading && (
@@ -162,14 +270,18 @@ export function MovieDetailsModal({ movie, open, onOpenChange }: MovieDetailsMod
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left column: Poster and basic info */}
             <div className="lg:col-span-1 space-y-4">
-              {/* Poster */}
-              <div className="aspect-[2/3] rounded-lg overflow-hidden border">
-                <img 
-                  src={getPosterUrl()} 
-                  alt={movie.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
+               {/* Poster */}
+               <div className="aspect-[2/3] rounded-lg overflow-hidden border">
+                 <img 
+                   src={getPosterUrl()} 
+                   alt={movie.title}
+                   className="w-full h-full object-cover"
+                   onError={(e) => {
+                     // If image fails to load, show a simple fallback
+                     e.currentTarget.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzAwIiBoZWlnaHQ9IjQ1MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMGYxNzJhIi8+PHRleHQgeD0iMTUwIiB5PSIyMjUiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGZpbGw9IiM5NGEzYjgiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIyMCIgZm9udC13ZWlnaHQ9ImJvbGQiPk1vdmllIFBvc3RlcjwvdGV4dD48L3N2Zz4='
+                   }}
+                 />
+               </div>
 
               {/* Local stats */}
               <Card>
@@ -209,17 +321,39 @@ export function MovieDetailsModal({ movie, open, onOpenChange }: MovieDetailsMod
                 </CardContent>
               </Card>
 
-              {/* IMDb button */}
-              {omdbData?.imdbID && (
-                <Button 
-                  onClick={openIMDbPage}
-                  className="w-full"
-                  variant="outline"
-                >
-                  <ExternalLink className="h-4 w-4 mr-2" />
-                  View on IMDb
-                </Button>
-              )}
+               {/* Update Metadata button */}
+               {omdbService.isConfigured() && (
+                 <Button 
+                   onClick={updateMovieMetadata}
+                   className="w-full"
+                   variant="secondary"
+                   disabled={updating}
+                 >
+                   {updating ? (
+                     <>
+                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                       Updating...
+                     </>
+                   ) : (
+                     <>
+                       <RefreshCw className="h-4 w-4 mr-2" />
+                       Update Metadata from OMDB
+                     </>
+                   )}
+                 </Button>
+               )}
+
+               {/* IMDb button */}
+               {omdbData?.imdbID && (
+                 <Button 
+                   onClick={openIMDbPage}
+                   className="w-full"
+                   variant="outline"
+                 >
+                   <ExternalLink className="h-4 w-4 mr-2" />
+                   View on IMDb
+                 </Button>
+               )}
             </div>
 
             {/* Right column: Movie details */}
@@ -397,31 +531,54 @@ export function MovieDetailsModal({ movie, open, onOpenChange }: MovieDetailsMod
                 </>
               )}
 
-              {/* No OMDB data message */}
-              {!loading && !error && !omdbData && omdbService.isConfigured() && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Film className="h-12 w-12 mx-auto mb-3 opacity-50" />
-                  <p>Movie details not loaded from OMDB</p>
-                  <p className="text-sm mt-2 mb-4">Click below to load enhanced details (uses API call)</p>
-                  <Button 
-                    onClick={fetchMovieDetails}
-                    disabled={loading}
-                    className="mt-2"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <Search className="h-4 w-4 mr-2" />
-                        Load OMDB Details
-                      </>
-                    )}
-                  </Button>
-                </div>
-              )}
+               {/* No OMDB data message or reload button */}
+               {omdbService.isConfigured() && (
+                 <div className="text-center py-4 text-muted-foreground">
+                   {!omdbData ? (
+                     <>
+                       <Film className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                       <p>Movie details not loaded from OMDB</p>
+                       <p className="text-sm mt-2 mb-4">Click below to load enhanced details (uses API call)</p>
+                       <Button 
+                         onClick={fetchMovieDetails}
+                         disabled={loading}
+                         className="mt-2"
+                       >
+                         {loading ? (
+                           <>
+                             <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                             Loading...
+                           </>
+                         ) : (
+                           <>
+                             <Search className="h-4 w-4 mr-2" />
+                             Load OMDB Details
+                           </>
+                         )}
+                       </Button>
+                     </>
+                   ) : (
+                     <Button 
+                       onClick={fetchMovieDetails}
+                       disabled={loading}
+                       variant="outline"
+                       className="mt-2"
+                     >
+                       {loading ? (
+                         <>
+                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                           Reloading...
+                         </>
+                       ) : (
+                         <>
+                           <RefreshCw className="h-4 w-4 mr-2" />
+                           Reload OMDB Details
+                         </>
+                       )}
+                     </Button>
+                   )}
+                 </div>
+               )}
 
               {/* API not configured message */}
               {!omdbService.isConfigured() && !error && (

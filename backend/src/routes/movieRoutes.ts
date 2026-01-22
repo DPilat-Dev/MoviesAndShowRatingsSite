@@ -7,9 +7,10 @@ import {
   deleteMovie,
   getMovieStats,
   getUnratedMovies,
+  updateMovieMetadata,
 } from '../controllers/movieController'
 import { validateQuery, validateBody } from '../middleware/validation'
-import { createMovieSchema, updateMovieSchema, movieQuerySchema, paginationSchema } from '../utils/validation'
+import { createMovieSchema, updateMovieSchema, bulkUpdateMovieSchema, movieQuerySchema, paginationSchema } from '../utils/validation'
 
 const router = Router()
 
@@ -30,6 +31,9 @@ router.post('/', validateBody(createMovieSchema), createMovie)
 
 // PUT /api/movies/:id - Update movie
 router.put('/:id', validateBody(updateMovieSchema), updateMovie)
+
+// POST /api/movies/bulk-update - Bulk update movie metadata
+router.post('/bulk-update', validateBody(bulkUpdateMovieSchema), updateMovieMetadata)
 
 // DELETE /api/movies/:id - Delete movie
 router.delete('/:id', deleteMovie)

@@ -1,23 +1,19 @@
-FROM node:18-slim
+FROM node:18-alpine
+
+# Install OpenSSL for Prisma
+RUN apk add --no-cache openssl
 
 WORKDIR /app
-
-# Install OpenSSL 1.1 and other required libraries
-RUN apt-get update && apt-get install -y \
-    openssl \
-    libssl1.1 \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install all dependencies (including dev)
-RUN npm install
+# Install dependencies
+RUN npm ci
 
-# Generate Prisma client with explicit binary target
-RUN npx prisma generate --no-engine
+# Generate Prisma client
+RUN npx prisma generate
 
 # Copy source code
 COPY . .

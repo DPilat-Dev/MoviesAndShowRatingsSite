@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Film, Star, Users, TrendingUp, Calendar } from 'lucide-react'
 import { movieApi, rankingApi, userApi } from '@/lib/api'
 import { ViewMovieRatingsModal } from '@/components/ViewMovieRatingsModal'
+import { RateMovieModal } from '@/components/RateMovieModal'
 import { useCallback } from 'react'
 import { getUserAvatar } from '@/utils/avatarUtils'
 import { DashboardSkeleton } from '@/components/Skeleton'
@@ -68,17 +69,19 @@ export default function Dashboard() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [availableYears, setAvailableYears] = useState<number[]>([])
+  const [ratingMovieId, setRatingMovieId] = useState<string | null>(null)
 
   const fetchDashboardData = useCallback(async () => {
     setIsLoading(true)
-    try {
-       // Fetch data in parallel
-       const [moviesRes, yearlyStatsRes, yearlyOverviewRes, unratedRes] = await Promise.all([
-         movieApi.getMovies({ limit: 1 }), // Just to get total count
-         rankingApi.getRankingsByYear(selectedYear, { limit: 10 }),
-         rankingApi.getYearlyStats(), // Get all years with data
-         movieApi.getUnratedMovies(selectedYear), // Get unrated movies for logged-in user
-       ])
+     try {
+        // Fetch data in parallel
+        const [moviesRes, yearlyStatsRes, yearlyOverviewRes, unratedRes, allMoviesRes] = await Promise.all([
+          movieApi.getMovies({ limit: 1 }), // Just to get total count
+          rankingApi.getRankingsByYear(selectedYear, { limit: 10 }),
+          rankingApi.getYearlyStats(), // Get all years with data
+          movieApi.getUnratedMovies(selectedYear), // Get unrated movies for logged-in user
+          movieApi.getMovies({ limit: 100 }), // Get movies to extract watched years
+        ])
 
        // Get users count (simplified - in real app would have user stats endpoint)
        const usersRes = await userApi.getUsers({ limit: 1 })
@@ -113,22 +116,29 @@ export default function Dashboard() {
         setUnratedMovies(unratedRes.data.movies.slice(0, 5))
       }
 
-      // Set available years from yearly overview
-      const yearsWithData = yearlyOverviewRes.data.yearlyStats
-        .filter((stat: YearlyStat) => stat.totalRankings > 0)
-        .map((stat: YearlyStat) => stat.year)
-        .sort((a: number, b: number) => b - a) // Sort descending
-      
-      // If no years with data, use current year
-      if (yearsWithData.length === 0) {
-        setAvailableYears([new Date().getFullYear()])
-      } else {
-        setAvailableYears(yearsWithData)
-        // If selected year is not in available years, set to first available year
-        if (!yearsWithData.includes(selectedYear)) {
-          setSelectedYear(yearsWithData[0])
+       // Get years from rankings (years with rankings)
+       const yearsWithRankings = yearlyOverviewRes.data.yearlyStats
+         .filter((stat: YearlyStat) => stat.totalRankings > 0)
+         .map((stat: YearlyStat) => stat.year)
+       
+       // Get years from movies (years with movies watched)
+       const movies = allMoviesRes.data.data || []
+       const yearsWithMovies = [...new Set(movies.map((movie: any) => movie.watchedYear))]
+       
+       // Combine both sets of years and sort descending
+       const allYears = [...new Set([...yearsWithRankings, ...yearsWithMovies])]
+         .sort((a: number, b: number) => b - a)
+       
+       // If no years at all, use current year
+       if (allYears.length === 0) {
+         setAvailableYears([new Date().getFullYear()])
+       } else {
+         setAvailableYears(allYears)
+         // If selected year is not in available years, set to first available year
+         if (!allYears.includes(selectedYear)) {
+           setSelectedYear(allYears[0])
+         }
         }
-       }
 
     } catch (error) {
       console.error('Error fetching dashboard data:', error)
@@ -260,14 +270,14 @@ export default function Dashboard() {
                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
                            <span className="font-bold">{index + 1}</span>
                          </div>
-                         <img 
-                           src={movie.posterUrl || omdbService.getPlaceholderPoster()} 
-                           alt={movie.title}
-                           className="h-12 w-8 object-cover rounded"
-                           onError={(e) => {
-                             (e.target as HTMLImageElement).src = omdbService.getPlaceholderPoster()
-                           }}
-                         />
+                          <img 
+                            src={omdbService.getMoviePoster(movie.title, movie.year, movie.posterUrl)} 
+                            alt={movie.title}
+                            className="h-12 w-8 object-cover rounded"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = omdbService.generateTempPoster(movie.title, movie.year)
+                            }}
+                          />
                          <div>
                            <p className="font-medium">{movie.title}</p>
                            <p className="text-sm text-muted-foreground">
@@ -330,27 +340,41 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-            {unratedMovies.map((movie) => (
-              <div key={movie.id} className="flex flex-col items-center space-y-3 p-4 rounded-lg border hover:bg-muted">
-                <img 
-                  src={movie.posterUrl || omdbService.getPlaceholderPoster()} 
-                  alt={movie.title}
-                  className="h-48 w-32 object-cover rounded-lg shadow-md"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).src = omdbService.getPlaceholderPoster()
-                  }}
-                />
-                <div className="text-center">
-                  <p className="font-medium text-sm line-clamp-2">{movie.title}</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    {movie.year}
-                  </p>
-                </div>
-                <Button size="sm" className="w-full">
-                  Rate
-                </Button>
-              </div>
-            ))}
+             {unratedMovies.map((movie) => (
+               <div key={movie.id} className="flex flex-col items-center space-y-3 p-4 rounded-lg border hover:bg-muted">
+                  <img 
+                    src={omdbService.getMoviePoster(movie.title, movie.year, movie.posterUrl)} 
+                    alt={movie.title}
+                    className="h-48 w-32 object-cover rounded-lg shadow-md"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).src = omdbService.generateTempPoster(movie.title, movie.year)
+                    }}
+                  />
+                 <div className="text-center">
+                   <p className="font-medium text-sm line-clamp-2">{movie.title}</p>
+                   <p className="text-xs text-muted-foreground mt-1">
+                     {movie.year}
+                   </p>
+                 </div>
+                 <RateMovieModal 
+                   movieId={movie.id}
+                   movieTitle={movie.title}
+                   onRatingAdded={fetchDashboardData}
+                   open={ratingMovieId === movie.id}
+                    onOpenChange={(isOpen) => {
+                      if (isOpen) {
+                        setRatingMovieId(movie.id)
+                      } else {
+                        setRatingMovieId(null)
+                      }
+                    }}
+                 >
+                   <Button size="sm" className="w-full">
+                     Rate
+                   </Button>
+                 </RateMovieModal>
+               </div>
+             ))}
           </div>
           {unratedMovies.length === 0 && (
             <div className="text-center py-8">

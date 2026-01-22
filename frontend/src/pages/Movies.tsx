@@ -125,33 +125,26 @@ export default function Movies() {
     }
   }, [search, selectedYear, sortBy, ratingRange, releaseYearRange])
 
-  const fetchMoviePosters = async (moviesList: Movie[]) => {
+  const fetchMoviePosters = (moviesList: Movie[]) => {
     const newPosters: Record<string, string> = {}
     
-    // Process movies in batches to avoid overwhelming the API
-    const batchSize = 5
-    for (let i = 0; i < moviesList.length; i += batchSize) {
-      const batch = moviesList.slice(i, i + batchSize)
-      
-      await Promise.all(
-        batch.map(async (movie) => {
-          // Only fetch if we don't already have a poster for this movie
-          if (!moviePosters[movie.id]) {
-            try {
-              const posterUrl = await omdbService.getMoviePoster(
-                movie.title,
-                movie.year,
-                movie.posterUrl
-              )
-              newPosters[movie.id] = posterUrl
-            } catch (error) {
-              console.warn(`Failed to fetch poster for ${movie.title}:`, error)
-              newPosters[movie.id] = omdbService.getPlaceholderPoster()
-            }
-          }
-        })
-      )
-    }
+    // Process all movies
+    moviesList.forEach((movie) => {
+      // Only process if we don't already have a poster for this movie
+      if (!moviePosters[movie.id]) {
+        try {
+          const posterUrl = omdbService.getMoviePoster(
+            movie.title,
+            movie.year,
+            movie.posterUrl
+          )
+          newPosters[movie.id] = posterUrl
+        } catch (error) {
+          console.warn(`Failed to get poster for ${movie.title}:`, error)
+          newPosters[movie.id] = omdbService.generateTempPoster(movie.title, movie.year)
+        }
+      }
+    })
     
     // Update posters state
     setMoviePosters(prev => ({ ...prev, ...newPosters }))
@@ -253,8 +246,8 @@ export default function Movies() {
                       alt={movie.title}
                       className="w-full h-full object-cover"
                       onError={(e) => {
-                        // If image fails to load, show placeholder
-                        e.currentTarget.src = omdbService.getPlaceholderPoster()
+                        // If image fails to load, show temporary poster
+                        e.currentTarget.src = omdbService.generateTempPoster(movie.title, movie.year)
                       }}
                     />
                   ) : (

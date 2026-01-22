@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # PostgreSQL Database (development)
+  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
     container_name: bosnia-movie-db-dev
@@ -23,7 +23,7 @@ services:
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile.fixed
+      dockerfile: Dockerfile.dev
     container_name: bosnia-movie-backend-dev
     depends_on:
       postgres:
@@ -33,10 +33,6 @@ services:
       NODE_ENV: development
       PORT: 5000
       JWT_SECRET: dev-secret-key-change-in-production
-      PRISMA_QUERY_ENGINE_BINARY: /app/node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node
-      RATE_LIMIT_WINDOW_MS: 900000
-      RATE_LIMIT_MAX_REQUESTS: 10000
-      TMDB_API_KEY: 804eb32a97427ede2862e377f4573aff
     ports:
       - "5000:5000"
     volumes:
@@ -54,7 +50,6 @@ services:
       - backend
     environment:
       VITE_API_URL: http://localhost:5000
-      VITE_OMDB_API_KEY: f4b35707
     ports:
       - "3000:3000"
     volumes:

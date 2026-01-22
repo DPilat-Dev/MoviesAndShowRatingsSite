@@ -41,19 +41,19 @@ export default function Users() {
       // Fetch stats for each user to get average ratings
       const usersWithStats = await Promise.all(
         usersData.map(async (user: User) => {
-          try {
-            const statsResponse = await userApi.getUserStats(user.id)
-            return {
-              ...user,
-              averageRating: statsResponse.data.averageRating || 0
-            }
-          } catch (error) {
-            console.error(`Failed to fetch stats for user ${user.id}:`, error)
-            return {
-              ...user,
-              averageRating: 0
-            }
-          }
+           try {
+             const statsResponse = await userApi.getUserStats(user.id)
+             return {
+               ...user,
+               averageRating: statsResponse.data.stats?.averageRating
+             }
+           } catch (error) {
+             console.error(`Failed to fetch stats for user ${user.id}:`, error)
+             return {
+               ...user,
+               averageRating: undefined
+             }
+           }
         })
       )
       
@@ -169,9 +169,9 @@ export default function Users() {
                         <div className="flex items-center">
                           <Star className="h-4 w-4 mr-2 text-yellow-500 fill-yellow-500" />
                           <div>
-                            <div className="text-2xl font-bold">
-                              {user.averageRating ? user.averageRating.toFixed(1) : '-'}
-                            </div>
+                             <div className="text-2xl font-bold">
+                               {user.averageRating != null ? user.averageRating.toFixed(1) : '-'}
+                             </div>
                             <div className="text-xs text-muted-foreground">Avg Rating</div>
                           </div>
                         </div>

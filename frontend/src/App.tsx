@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { UserProvider } from '@/contexts/UserContext'
 import { DarkModeProvider } from '@/contexts/DarkModeContext'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import Layout from '@/components/Layout'
 import Dashboard from '@/pages/Dashboard'
 import Movies from '@/pages/Movies'
@@ -18,27 +19,29 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 
 function App() {
   return (
-    <DarkModeProvider>
-      <UserProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={
-              <ProtectedRoute>
-                <Layout />
-              </ProtectedRoute>
-              }>
-                <Route index element={<Dashboard />} />
-                <Route path="movies" element={<Movies />} />
-                <Route path="rankings" element={<Rankings />} />
-                <Route path="my-rankings" element={<MyRankings />} />
-                <Route path="users" element={<Users />} />
-                <Route path="profile" element={<Profile />} />
-              </Route>
-          </Routes>
-        </Router>
-      </UserProvider>
-    </DarkModeProvider>
+    <ErrorBoundary>
+      <DarkModeProvider>
+        <UserProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={
+                <ProtectedRoute>
+                  <Layout />
+                </ProtectedRoute>
+                }>
+                  <Route index element={<Dashboard />} />
+                  <Route path="movies" element={<Movies />} />
+                  <Route path="rankings" element={<Rankings />} />
+                  <Route path="my-rankings" element={<MyRankings />} />
+                  <Route path="users" element={<Users />} />
+                  <Route path="profile" element={<Profile />} />
+                </Route>
+            </Routes>
+          </Router>
+        </UserProvider>
+      </DarkModeProvider>
+    </ErrorBoundary>
   )
 }
 

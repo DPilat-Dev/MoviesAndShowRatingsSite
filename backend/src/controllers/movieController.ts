@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
-import { CreateMovieInput, UpdateMovieInput, MovieQueryInput, movieQuerySchema } from '../utils/validation'
+import { CreateMovieInput, UpdateMovieInput, BulkUpdateMovieInput, MovieQueryInput, movieQuerySchema } from '../utils/validation'
 
 const prisma = new PrismaClient()
 
@@ -385,7 +385,8 @@ export const getUnratedMovies = async (req: Request, res: Response) => {
       const userRankings = await prisma.ranking.findMany({
         where: { 
           userId,
-          rankingYear: watchedYear 
+          // Remove the rankingYear filter to check if user has rated the movie in ANY year
+          // rankingYear: watchedYear 
         },
         select: { movieId: true },
       })
@@ -412,5 +413,59 @@ export const getUnratedMovies = async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching unrated movies:', error)
     res.status(500).json({ error: 'Failed to fetch unrated movies' })
+  }
+}
+
+export const updateMovieMetadata = async (req: Request, res: Response) => {
+  try {
+    const { movieIds, metadata } = req.body as BulkUpdateMovieInput
+    
+    // Update movies in batches to avoid overwhelming the database
+    const BATCH_SIZE = 10
+    const results = []
+    const errors = []
+    
+    for (let i = 0; i < movieIds.length; i += BATCH_SIZE) {
+      const batch = movieIds.slice(i, i + BATCH_SIZE)
+      
+      try {
+        const updateResult = await prisma.movie.updateMany({
+          where: {
+            id: {
+              in: batch
+            }
+          },
+          data: metadata
+        })
+        
+        results.push({
+          batch: batch,
+          updatedCount: updateResult.count
+        })
+        
+        // Small delay between batches to avoid overwhelming the database
+        if (i + BATCH_SIZE < movieIds.length) {
+          await new Promise(resolve => setTimeout(resolve, 100))
+        }
+      } catch (error) {
+        console.error(`Error updating batch ${i / BATCH_SIZE + 1}:`, error)
+        errors.push({
+          batch: batch,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        })
+      }
+    }
+    
+    res.json({
+      success: true,
+      totalMovies: movieIds.length,
+      results,
+      errors: errors.length > 0 ? errors : undefined,
+      message: `Updated metadata for ${movieIds.length} movies`
+    })
+    
+  } catch (error) {
+    console.error('Error updating movie metadata:', error)
+    res.status(500).json({ error: 'Failed to update movie metadata' })
   }
 }

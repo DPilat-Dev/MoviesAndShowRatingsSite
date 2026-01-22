@@ -1,4 +1,15 @@
 import axios from 'axios'
+import { logger } from '@/utils/logger'
+
+// Extend axios config to include metadata
+declare module 'axios' {
+  interface InternalAxiosRequestConfig {
+    metadata?: {
+      startTime?: number
+      duration?: number
+    }
+  }
+}
 
 const api = axios.create({
   baseURL: '/api',
@@ -22,10 +33,24 @@ api.interceptors.request.use(
   }
 )
 
-// Response interceptor for error handling
+// Response interceptor for error handling and logging
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Log successful API calls
+    const { method, url } = response.config
+    const { status } = response
+    const duration = response.config.metadata?.duration
+    
+    logger.logApiRequest(method?.toUpperCase() || 'GET', url || '', status, duration)
+    
+    return response
+  },
   (error) => {
+    const { method, url } = error.config || {}
+    const status = error.response?.status || 0
+    
+    logger.logApiRequest(method?.toUpperCase() || 'GET', url || '', status)
+    
     if (error.response?.status === 401) {
       // Handle unauthorized access
       localStorage.removeItem('user')
@@ -34,6 +59,32 @@ api.interceptors.response.use(
     return Promise.reject(error)
   }
 )
+
+// Request interceptor for timing
+api.interceptors.request.use(
+  (config) => {
+    config.metadata = { startTime: Date.now() }
+    return config
+  },
+  (error) => {
+    return Promise.reject(error)
+  }
+)
+
+// Update response interceptor to calculate duration
+const originalResponseInterceptor = api.interceptors.response.use
+api.interceptors.response.use = function(fulfilled, rejected) {
+  return originalResponseInterceptor.call(
+    this,
+    (response) => {
+      if (response.config.metadata?.startTime) {
+        response.config.metadata.duration = Date.now() - response.config.metadata.startTime
+      }
+      return fulfilled ? fulfilled(response) : response
+    },
+    rejected
+  )
+}
 
 // User API
 export const userApi = {
@@ -96,6 +147,15 @@ export const movieApi = {
   
   getUnratedMovies: (year: number) =>
     api.get(`/movies/unrated/${year}`),
+
+  bulkUpdateMovies: (data: {
+    movieIds: string[]
+    metadata: {
+      description?: string
+      posterUrl?: string
+      year?: number
+    }
+  }) => api.post('/movies/bulk-update', data),
 }
 
 // Ranking API

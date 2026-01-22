@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 import { Textarea } from '@/components/ui/textarea'
@@ -9,16 +9,40 @@ interface RateMovieModalProps {
   movieId: string
   movieTitle: string
   onRatingAdded: () => void
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  children?: React.ReactNode
 }
 
-export function RateMovieModal({ movieId, movieTitle, onRatingAdded }: RateMovieModalProps) {
-  const [open, setOpen] = useState(false)
+export function RateMovieModal({ 
+  movieId, 
+  movieTitle, 
+  onRatingAdded, 
+  open: externalOpen,
+  onOpenChange: externalOnOpenChange,
+  children 
+}: RateMovieModalProps) {
+  const [internalOpen, setInternalOpen] = useState(false)
   const [rating, setRating] = useState(0)
   const [hoverRating, setHoverRating] = useState(0)
   const [description, setDescription] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
-
+  
+  // Use external state if provided, otherwise use internal state
+  const open = externalOpen !== undefined ? externalOpen : internalOpen
+  const setOpen = externalOnOpenChange || setInternalOpen
+  
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!open) {
+      setRating(0)
+      setHoverRating(0)
+      setDescription('')
+      setError('')
+      setIsSubmitting(false)
+    }
+  }, [open])
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true)
@@ -42,10 +66,8 @@ export function RateMovieModal({ movieId, movieTitle, onRatingAdded }: RateMovie
         description: description.trim() || undefined
       })
       
-      setOpen(false)
-      setRating(0)
-      setDescription('')
-      onRatingAdded()
+       setOpen(false)
+       onRatingAdded()
     } catch (err: unknown) {
       console.error('Failed to submit rating:', err)
       if (err && typeof err === 'object' && 'response' in err) {
@@ -61,11 +83,17 @@ export function RateMovieModal({ movieId, movieTitle, onRatingAdded }: RateMovie
 
    return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Rate movie">
-          <Star className="h-4 w-4" />
-        </Button>
-      </DialogTrigger>
+      {children ? (
+        <DialogTrigger asChild>
+          {children}
+        </DialogTrigger>
+      ) : (
+        <DialogTrigger asChild>
+          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" title="Rate movie">
+            <Star className="h-4 w-4" />
+          </Button>
+        </DialogTrigger>
+      )}
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle>Rate "{movieTitle}"</DialogTitle>
@@ -140,18 +168,13 @@ export function RateMovieModal({ movieId, movieTitle, onRatingAdded }: RateMovie
         </div>
         
         <DialogFooter>
-           <Button
-             variant="outline"
-             onClick={() => {
-               setOpen(false)
-               setRating(0)
-               setDescription('')
-               setError('')
-             }}
-             disabled={isSubmitting}
-           >
-             Cancel
-           </Button>
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
           <Button
             onClick={handleSubmit}
             disabled={rating === 0 || isSubmitting}

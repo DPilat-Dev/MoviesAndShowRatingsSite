@@ -19,6 +19,8 @@ model User {
   rankings Ranking[]
   
   @@map("users")
+  @@index([createdAt])
+  @@index([isActive])
 }
 
 model Movie {
@@ -36,6 +38,10 @@ model Movie {
   @@map("movies")
   @@index([watchedYear])
   @@index([year])
+  @@index([title])
+  @@index([createdAt])
+  @@index([addedBy])
+  @@index([watchedYear, year])
 }
 
 model Ranking {
@@ -56,4 +62,10 @@ model Ranking {
   @@index([rankingYear])
   @@index([userId, rankingYear])
   @@index([movieId, rankingYear])
+  @@index([userId])
+  @@index([movieId])
+  @@index([rating])
+  @@index([rankedAt])
+  @@index([updatedAt])
+  @@index([userId, movieId])
 }

@@ -121,7 +121,17 @@ export const createUser = async (req: Request, res: Response) => {
     })
     
     if (existingUser) {
-      return res.status(409).json({ error: 'Username already exists' })
+      return res.status(409).json({ 
+        error: 'Username already exists',
+        existingUser: {
+          id: existingUser.id,
+          username: existingUser.username,
+          displayName: existingUser.displayName,
+          avatarUrl: existingUser.avatarUrl,
+          isActive: existingUser.isActive,
+          createdAt: existingUser.createdAt,
+        }
+      })
     }
     
     const user = await prisma.user.create({
@@ -278,15 +288,15 @@ export const getUserStats = async (req: Request, res: Response) => {
       }
     })
     
-    res.json({
-      user,
-      stats: {
-        totalRankings: averageRating._count,
-        averageRating: averageRating._avg.rating ? parseFloat(averageRating._avg.rating.toFixed(1)) : 0,
-        yearlyStats: yearlyStats.sort((a, b) => b.year - a.year),
-      },
-      recentRankings: rankings.slice(0, 10),
-    })
+     res.json({
+       user,
+       stats: {
+         totalRankings: averageRating._count,
+         averageRating: averageRating._count && averageRating._count > 0 && averageRating._avg.rating ? parseFloat(averageRating._avg.rating.toFixed(1)) : null,
+         yearlyStats: yearlyStats.sort((a, b) => b.year - a.year),
+       },
+       recentRankings: rankings.slice(0, 10),
+     })
   } catch (error) {
     console.error('Error fetching user stats:', error)
     res.status(500).json({ error: 'Failed to fetch user statistics' })
