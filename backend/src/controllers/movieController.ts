@@ -350,8 +350,67 @@ export const getMovieStats = async (req: Request, res: Response) => {
           count: item._count.id,
         })),
       })
-  } catch (error) {
+   } catch (error) {
     console.error('Error fetching movie stats:', error)
     res.status(500).json({ error: 'Failed to fetch movie statistics' })
+  }
+}
+
+export const getUnratedMovies = async (req: Request, res: Response) => {
+  try {
+    const { year } = req.params
+    const userId = req.headers['x-user-id'] as string
+    
+    if (!year) {
+      return res.status(400).json({ error: 'Year parameter is required' })
+    }
+    
+    const watchedYear = parseInt(year)
+    
+    // Get all movies for the watched year
+    const allMovies = await prisma.movie.findMany({
+      where: { watchedYear },
+      select: {
+        id: true,
+        title: true,
+        year: true,
+        posterUrl: true,
+        watchedYear: true,
+      },
+      orderBy: { title: 'asc' },
+    })
+    
+    // If userId is provided in headers, get movies that this specific user hasn't rated
+    if (userId) {
+      const userRankings = await prisma.ranking.findMany({
+        where: { 
+          userId,
+          rankingYear: watchedYear 
+        },
+        select: { movieId: true },
+      })
+      
+      const ratedMovieIds = new Set(userRankings.map(r => r.movieId))
+      const unratedMovies = allMovies.filter(movie => !ratedMovieIds.has(movie.id))
+      
+      return res.json({
+        year: watchedYear,
+        totalMovies: allMovies.length,
+        unratedCount: unratedMovies.length,
+        movies: unratedMovies,
+      })
+    }
+    
+    // If no userId provided, return empty array (user not logged in)
+    res.json({
+      year: watchedYear,
+      totalMovies: allMovies.length,
+      unratedCount: 0,
+      movies: [],
+    })
+    
+  } catch (error) {
+    console.error('Error fetching unrated movies:', error)
+    res.status(500).json({ error: 'Failed to fetch unrated movies' })
   }
 }

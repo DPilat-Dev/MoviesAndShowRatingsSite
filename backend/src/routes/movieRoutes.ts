@@ -6,6 +6,7 @@ import {
   updateMovie,
   deleteMovie,
   getMovieStats,
+  getUnratedMovies,
 } from '../controllers/movieController'
 import { validateQuery, validateBody } from '../middleware/validation'
 import { createMovieSchema, updateMovieSchema, movieQuerySchema, paginationSchema } from '../utils/validation'
@@ -17,6 +18,9 @@ router.get('/', validateQuery(movieQuerySchema), validateQuery(paginationSchema)
 
 // GET /api/movies/stats - Get movie statistics
 router.get('/stats', getMovieStats)
+
+// GET /api/movies/unrated/:year - Get unrated movies for a specific year
+router.get('/unrated/:year', getUnratedMovies)
 
 // GET /api/movies/:id - Get movie by ID
 router.get('/:id', getMovieById)

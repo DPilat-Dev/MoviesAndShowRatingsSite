@@ -93,6 +93,9 @@ export const movieApi = {
   
   getMovieStats: () =>
     api.get('/movies/stats'),
+  
+  getUnratedMovies: (year: number) =>
+    api.get(`/movies/unrated/${year}`),
 }
 
 // Ranking API

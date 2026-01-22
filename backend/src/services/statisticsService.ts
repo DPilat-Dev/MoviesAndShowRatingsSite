@@ -157,15 +157,16 @@ class StatisticsService {
 
     const topMoviesWithDetails = await Promise.all(
       topMovies.map(async (movie) => {
-        const movieDetails = await prisma.movie.findUnique({
+         const movieDetails = await prisma.movie.findUnique({
           where: { id: movie.movieId },
-          select: { title: true, year: true },
+          select: { title: true, year: true, posterUrl: true },
         });
 
         return {
           id: movie.movieId,
           title: movieDetails?.title || 'Unknown',
           year: movieDetails?.year || 0,
+          posterUrl: movieDetails?.posterUrl || null,
           averageRating: movie._avg.rating || 0,
           rankingCount: movie._count,
         };

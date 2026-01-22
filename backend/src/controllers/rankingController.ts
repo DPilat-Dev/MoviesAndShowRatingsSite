@@ -309,17 +309,18 @@ export const getRankingsByYear = async (req: Request, res: Response) => {
     
     // Get top movies for the year
     const topMovies = await prisma.$queryRaw`
-      SELECT 
+       SELECT 
         m.id,
         m.title,
         m.year,
         m.watched_year as watchedYear,
+        m.poster_url as posterUrl,
         CAST(AVG(r.rating) AS FLOAT) as averageRating,
         CAST(COUNT(r.id) AS INTEGER) as totalRankings
       FROM movies m
       JOIN rankings r ON m.id = r.movie_id
        WHERE m.watched_year = ${ranking_year}
-       GROUP BY m.id, m.title, m.year, m.watched_year
+       GROUP BY m.id, m.title, m.year, m.watched_year, m.poster_url
         HAVING COUNT(r.id) >= 1
        ORDER BY AVG(r.rating) DESC
        LIMIT 10
@@ -342,12 +343,13 @@ export const getRankingsByYear = async (req: Request, res: Response) => {
        LIMIT 10
     `
     
-      // Convert BigInt to Number for JSON serialization and normalize field names
+       // Convert BigInt to Number for JSON serialization and normalize field names
       const safeTopMovies = Array.isArray(topMovies) ? topMovies.map(movie => ({
         id: movie.id,
         title: movie.title,
         year: movie.year,
         watchedYear: movie.watchedyear || movie.watchedYear,
+        posterUrl: movie.posterurl || movie.posterUrl || null,
         averageRating: Number(movie.averagerating || movie.averageRating || 0),
         totalRankings: Number(movie.totalrankings || movie.totalRankings || 0),
       })) : []

@@ -7,6 +7,7 @@ import { ViewMovieRatingsModal } from '@/components/ViewMovieRatingsModal'
 import { useCallback } from 'react'
 import { getUserAvatar } from '@/utils/avatarUtils'
 import { DashboardSkeleton } from '@/components/Skeleton'
+import { omdbService } from '@/services/omdbService'
 
 interface DashboardStats {
   totalMovies: number
@@ -20,8 +21,17 @@ interface TopMovie {
   title: string
   year: number
   watchedYear: number
+  posterUrl?: string | null
   averageRating: number
   totalRankings: number
+}
+
+interface UnratedMovie {
+  id: string
+  title: string
+  year: number
+  watchedYear: number
+  posterUrl?: string | null
 }
 
 interface RecentActivity {
@@ -54,6 +64,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [topMovies, setTopMovies] = useState<TopMovie[]>([])
   const [recentActivity, setRecentActivity] = useState<RecentActivity[]>([])
+  const [unratedMovies, setUnratedMovies] = useState<UnratedMovie[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
   const [availableYears, setAvailableYears] = useState<number[]>([])
@@ -62,10 +73,11 @@ export default function Dashboard() {
     setIsLoading(true)
     try {
        // Fetch data in parallel
-       const [moviesRes, yearlyStatsRes, yearlyOverviewRes] = await Promise.all([
+       const [moviesRes, yearlyStatsRes, yearlyOverviewRes, unratedRes] = await Promise.all([
          movieApi.getMovies({ limit: 1 }), // Just to get total count
          rankingApi.getRankingsByYear(selectedYear, { limit: 10 }),
          rankingApi.getYearlyStats(), // Get all years with data
+         movieApi.getUnratedMovies(selectedYear), // Get unrated movies for logged-in user
        ])
 
        // Get users count (simplified - in real app would have user stats endpoint)
@@ -91,9 +103,14 @@ export default function Dashboard() {
         setTopMovies(yearlyStatsRes.data.topMovies.slice(0, 5))
       }
 
-      // Set recent activity
+       // Set recent activity
       if (yearlyStatsRes.data.data) {
         setRecentActivity(yearlyStatsRes.data.data.slice(0, 5))
+      }
+
+      // Set unrated movies
+      if (unratedRes.data.movies) {
+        setUnratedMovies(unratedRes.data.movies.slice(0, 5))
       }
 
       // Set available years from yearly overview
@@ -217,7 +234,7 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {/* Top movies section */}
+      {/* Top movies and activity section */}
       <div className="grid gap-8 lg:grid-cols-2">
         <Card>
           <CardHeader>
@@ -243,6 +260,14 @@ export default function Dashboard() {
                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
                            <span className="font-bold">{index + 1}</span>
                          </div>
+                         <img 
+                           src={movie.posterUrl || omdbService.getPlaceholderPoster()} 
+                           alt={movie.title}
+                           className="h-12 w-8 object-cover rounded"
+                           onError={(e) => {
+                             (e.target as HTMLImageElement).src = omdbService.getPlaceholderPoster()
+                           }}
+                         />
                          <div>
                            <p className="font-medium">{movie.title}</p>
                            <p className="text-sm text-muted-foreground">
@@ -294,6 +319,46 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Unrated movies section */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Unrated Movies of {selectedYear}</CardTitle>
+          <CardDescription>
+            Movies from {selectedYear} that haven't been rated yet
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+            {unratedMovies.map((movie) => (
+              <div key={movie.id} className="flex flex-col items-center space-y-3 p-4 rounded-lg border hover:bg-muted">
+                <img 
+                  src={movie.posterUrl || omdbService.getPlaceholderPoster()} 
+                  alt={movie.title}
+                  className="h-48 w-32 object-cover rounded-lg shadow-md"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = omdbService.getPlaceholderPoster()
+                  }}
+                />
+                <div className="text-center">
+                  <p className="font-medium text-sm line-clamp-2">{movie.title}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {movie.year}
+                  </p>
+                </div>
+                <Button size="sm" className="w-full">
+                  Rate
+                </Button>
+              </div>
+            ))}
+          </div>
+          {unratedMovies.length === 0 && (
+            <div className="text-center py-8">
+              <p className="text-muted-foreground">All movies from {selectedYear} have been rated!</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
