@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
-import { CreateRankingInput, UpdateRankingInput, RankingQueryInput, rankingQuerySchema } from '../utils/validation'
+import { CreateRankingInput, UpdateRankingInput, rankingQuerySchema } from '../utils/validation'
 
 const prisma = new PrismaClient()
 
@@ -64,7 +64,7 @@ export const getRankings = async (req: Request, res: Response) => {
       prisma.ranking.count({ where }),
     ])
     
-    res.json({
+    return res.json({
       data: rankings,
       pagination: {
         page: Number(page),
@@ -75,7 +75,7 @@ export const getRankings = async (req: Request, res: Response) => {
     })
   } catch (error) {
     console.error('Error fetching rankings:', error)
-    res.status(500).json({ error: 'Failed to fetch rankings' })
+    return res.status(500).json({ error: 'Failed to fetch rankings' })
   }
 }
 
@@ -108,10 +108,10 @@ export const getRankingById = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Ranking not found' })
     }
     
-    res.json(ranking)
+    return res.json(ranking)
   } catch (error) {
     console.error('Error fetching ranking:', error)
-    res.status(500).json({ error: 'Failed to fetch ranking' })
+    return res.status(500).json({ error: 'Failed to fetch ranking' })
   }
 }
 
@@ -182,10 +182,10 @@ export const createRanking = async (req: Request, res: Response) => {
        },
      })
     
-    res.status(201).json(ranking)
+    return res.status(201).json(ranking)
   } catch (error) {
     console.error('Error creating ranking:', error)
-    res.status(500).json({ error: 'Failed to create ranking' })
+    return res.status(500).json({ error: 'Failed to create ranking' })
   }
 }
 
@@ -219,7 +219,7 @@ export const updateRanking = async (req: Request, res: Response) => {
       },
     })
     
-    res.json(ranking)
+    return res.json(ranking)
   } catch (error) {
     console.error('Error updating ranking:', error)
     
@@ -227,7 +227,7 @@ export const updateRanking = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Ranking not found' })
     }
     
-    res.status(500).json({ error: 'Failed to update ranking' })
+    return res.status(500).json({ error: 'Failed to update ranking' })
   }
 }
 
@@ -239,7 +239,7 @@ export const deleteRanking = async (req: Request, res: Response) => {
       where: { id },
     })
     
-    res.status(204).send()
+    return res.status(204).send()
   } catch (error) {
     console.error('Error deleting ranking:', error)
     
@@ -247,7 +247,7 @@ export const deleteRanking = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Ranking not found' })
     }
     
-    res.status(500).json({ error: 'Failed to delete ranking' })
+    return res.status(500).json({ error: 'Failed to delete ranking' })
   }
 }
 
@@ -361,8 +361,8 @@ export const getRankingsByYear = async (req: Request, res: Response) => {
         totalRankings: Number(user.totalrankings || user.totalRankings || 0),
         averageRating: Number(user.averagerating || user.averageRating || 0),
       })) : []
-     
-     res.json({
+      
+      return res.json({
        year: ranking_year,
        stats: {
          totalRankings: Number(stats._count),
@@ -379,14 +379,14 @@ export const getRankingsByYear = async (req: Request, res: Response) => {
        },
        topMovies: safeTopMovies,
        activeUsers: safeActiveUsers,
-     })
+      })
   } catch (error) {
     console.error('Error fetching rankings by year:', error)
-    res.status(500).json({ error: 'Failed to fetch rankings by year' })
+    return res.status(500).json({ error: 'Failed to fetch rankings by year' })
   }
 }
 
-export const getYearlyStats = async (req: Request, res: Response) => {
+export const getYearlyStats = async (_req: Request, res: Response) => {
   try {
      // Get watched years from movies that have rankings
      const moviesWithRankings = await prisma.movie.findMany({
@@ -452,16 +452,16 @@ export const getYearlyStats = async (req: Request, res: Response) => {
       const minYear = years.length > 0 ? Math.min(...years) : new Date().getFullYear()
       const maxYear = years.length > 0 ? Math.max(...years) : new Date().getFullYear()
      
-     res.json({
-       yearRange: {
-         min: minYear,
-         max: maxYear,
-       },
-       yearlyStats: filteredStats,
-     })
+      return res.json({
+        yearRange: {
+          min: minYear,
+          max: maxYear,
+        },
+        yearlyStats: filteredStats,
+       })
   } catch (error) {
     console.error('Error fetching yearly stats:', error)
-    res.status(500).json({ error: 'Failed to fetch yearly statistics' })
+    return res.status(500).json({ error: 'Failed to fetch yearly statistics' })
   }
 }
 
@@ -505,9 +505,9 @@ export const getUserMovieRanking = async (req: Request, res: Response) => {
       })
     }
     
-    res.json(ranking)
+    return res.json(ranking)
   } catch (error) {
     console.error('Error fetching user movie ranking:', error)
-    res.status(500).json({ error: 'Failed to fetch ranking' })
+    return res.status(500).json({ error: 'Failed to fetch ranking' })
   }
 }

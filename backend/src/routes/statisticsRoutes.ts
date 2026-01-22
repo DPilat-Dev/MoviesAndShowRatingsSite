@@ -33,10 +33,10 @@ router.get('/year/:year', async (req, res) => {
     }
     
     const stats = await statisticsService.getYearlyStats(year);
-    res.json(stats);
+    return res.json(stats);
   } catch (error) {
     console.error('Yearly stats error:', error);
-    res.status(500).json({ error: 'Failed to get yearly statistics' });
+    return res.status(500).json({ error: 'Failed to get yearly statistics' });
   }
 });
 
@@ -109,13 +109,11 @@ router.get('/top-movies', async (req, res) => {
     const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
     const year = req.query.year ? parseInt(req.query.year as string) : undefined;
     
-    const where = year ? { rankingYear: year } : {};
-    
     const topMovies = await statisticsService.getOverallStats();
     
     // For now, return top movies from current data
     // In a real implementation, you would query the database directly
-    res.json({
+    return res.json({
       topMovies: topMovies.yearlyStats.flatMap(yearStats => yearStats.topMovies)
         .sort((a, b) => b.averageRating - a.averageRating)
         .slice(0, limit),
@@ -124,7 +122,7 @@ router.get('/top-movies', async (req, res) => {
     });
   } catch (error) {
     console.error('Top movies error:', error);
-    res.status(500).json({ error: 'Failed to get top movies' });
+    return res.status(500).json({ error: 'Failed to get top movies' });
   }
 });
 

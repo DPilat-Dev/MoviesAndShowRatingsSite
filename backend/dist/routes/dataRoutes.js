@@ -208,7 +208,7 @@ router.post('/import', async (req, res) => {
                 }
             }
         }
-        res.json({
+        return res.json({
             message: 'Import completed',
             results,
             summary: {
@@ -221,7 +221,7 @@ router.post('/import', async (req, res) => {
     catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Import error:', errorMessage);
-        res.status(400).json({ error: 'Import failed', details: errorMessage });
+        return res.status(400).json({ error: 'Import failed', details: errorMessage });
     }
 });
 router.get('/stats', async (_req, res) => {
@@ -240,7 +240,7 @@ router.get('/stats', async (_req, res) => {
                 rankingYear: 'desc',
             },
         });
-        res.json({
+        return res.json({
             counts: {
                 users: userCount,
                 movies: movieCount,
@@ -261,7 +261,7 @@ router.get('/stats', async (_req, res) => {
     catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error('Stats error:', errorMessage);
-        res.status(500).json({ error: 'Failed to get statistics' });
+        return res.status(500).json({ error: 'Failed to get statistics' });
     }
 });
 exports.default = router;

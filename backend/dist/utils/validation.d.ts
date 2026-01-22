@@ -66,6 +66,44 @@ export declare const updateMovieSchema: z.ZodObject<{
     posterUrl?: string | undefined;
     watchedYear?: number | undefined;
 }>;
+export declare const bulkUpdateMovieSchema: z.ZodObject<{
+    movieIds: z.ZodArray<z.ZodString, "many">;
+    metadata: z.ZodEffects<z.ZodObject<{
+        description: z.ZodOptional<z.ZodString>;
+        posterUrl: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
+        year: z.ZodOptional<z.ZodNumber>;
+    }, "strip", z.ZodTypeAny, {
+        year?: number | undefined;
+        description?: string | undefined;
+        posterUrl?: string | undefined;
+    }, {
+        year?: number | undefined;
+        description?: string | undefined;
+        posterUrl?: string | undefined;
+    }>, {
+        year?: number | undefined;
+        description?: string | undefined;
+        posterUrl?: string | undefined;
+    }, {
+        year?: number | undefined;
+        description?: string | undefined;
+        posterUrl?: string | undefined;
+    }>;
+}, "strip", z.ZodTypeAny, {
+    movieIds: string[];
+    metadata: {
+        year?: number | undefined;
+        description?: string | undefined;
+        posterUrl?: string | undefined;
+    };
+}, {
+    movieIds: string[];
+    metadata: {
+        year?: number | undefined;
+        description?: string | undefined;
+        posterUrl?: string | undefined;
+    };
+}>;
 export declare const createRankingSchema: z.ZodObject<{
     userId: z.ZodString;
     movieId: z.ZodString;
@@ -150,6 +188,7 @@ export type CreateUserInput = z.infer<typeof createUserSchema>;
 export type UpdateUserInput = z.infer<typeof updateUserSchema>;
 export type CreateMovieInput = z.infer<typeof createMovieSchema>;
 export type UpdateMovieInput = z.infer<typeof updateMovieSchema>;
+export type BulkUpdateMovieInput = z.infer<typeof bulkUpdateMovieSchema>;
 export type CreateRankingInput = z.infer<typeof createRankingSchema>;
 export type UpdateRankingInput = z.infer<typeof updateRankingSchema>;
 export type MovieQueryInput = z.infer<typeof movieQuerySchema>;

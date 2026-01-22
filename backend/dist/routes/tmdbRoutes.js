@@ -23,14 +23,14 @@ router.get('/search', async (req, res) => {
             rating: movie.vote_average,
             voteCount: movie.vote_count,
         }));
-        res.json({
+        return res.json({
             results: formattedResults,
             total: movies.length,
         });
     }
     catch (error) {
         console.error('TMDB search API error:', error);
-        res.status(500).json({ error: 'Failed to search movies' });
+        return res.status(500).json({ error: 'Failed to search movies' });
     }
 });
 router.get('/movie/:id', async (req, res) => {
@@ -63,11 +63,11 @@ router.get('/movie/:id', async (req, res) => {
             status: movieDetails.status,
             homepage: movieDetails.homepage,
         };
-        res.json(formattedMovie);
+        return res.json(formattedMovie);
     }
     catch (error) {
         console.error('TMDB movie details API error:', error);
-        res.status(500).json({ error: 'Failed to get movie details' });
+        return res.status(500).json({ error: 'Failed to get movie details' });
     }
 });
 router.get('/match', async (req, res) => {
@@ -97,11 +97,11 @@ router.get('/match', async (req, res) => {
             releaseDate: movieDetails.release_date,
             tagline: movieDetails.tagline,
         };
-        res.json(formattedMovie);
+        return res.json(formattedMovie);
     }
     catch (error) {
         console.error('TMDB match API error:', error);
-        res.status(500).json({ error: 'Failed to match movie' });
+        return res.status(500).json({ error: 'Failed to match movie' });
     }
 });
 router.post('/import', async (req, res) => {
@@ -129,7 +129,7 @@ router.post('/import', async (req, res) => {
             runtime: movieDetails.runtime,
             genres: movieDetails.genres.map(g => g.name).join(', '),
         };
-        res.json({
+        return res.json({
             message: 'Movie ready for import',
             movie: movieData,
             source: 'tmdb',
@@ -137,7 +137,7 @@ router.post('/import', async (req, res) => {
     }
     catch (error) {
         console.error('TMDB import API error:', error);
-        res.status(500).json({ error: 'Failed to import movie from TMDB' });
+        return res.status(500).json({ error: 'Failed to import movie from TMDB' });
     }
 });
 exports.default = router;

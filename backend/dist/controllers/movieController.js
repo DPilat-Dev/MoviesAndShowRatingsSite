@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getMovieStats = exports.deleteMovie = exports.updateMovie = exports.createMovie = exports.getMovieById = exports.getMovies = void 0;
+exports.updateMovieMetadata = exports.getUnratedMovies = exports.getMovieStats = exports.deleteMovie = exports.updateMovie = exports.createMovie = exports.getMovieById = exports.getMovies = void 0;
 const client_1 = require("@prisma/client");
 const validation_1 = require("../utils/validation");
 const prisma = new client_1.PrismaClient();
@@ -63,7 +63,7 @@ const getMovies = async (req, res) => {
                 totalRankings: movie._count.rankings,
             };
         });
-        res.json({
+        return res.json({
             data: moviesWithStats,
             pagination: {
                 page: Number(page),
@@ -75,7 +75,7 @@ const getMovies = async (req, res) => {
     }
     catch (error) {
         console.error('Error fetching movies:', error);
-        res.status(500).json({ error: 'Failed to fetch movies' });
+        return res.status(500).json({ error: 'Failed to fetch movies' });
     }
 };
 exports.getMovies = getMovies;
@@ -140,11 +140,11 @@ const getMovieById = async (req, res) => {
             totalRankings: movie._count.rankings,
             yearlyStats: yearlyStats.sort((a, b) => b.year - a.year),
         };
-        res.json(movieWithStats);
+        return res.json(movieWithStats);
     }
     catch (error) {
         console.error('Error fetching movie:', error);
-        res.status(500).json({ error: 'Failed to fetch movie' });
+        return res.status(500).json({ error: 'Failed to fetch movie' });
     }
 };
 exports.getMovieById = getMovieById;
@@ -183,11 +183,11 @@ const createMovie = async (req, res) => {
                 createdAt: true,
             },
         });
-        res.status(201).json(movie);
+        return res.status(201).json(movie);
     }
     catch (error) {
         console.error('Error creating movie:', error);
-        res.status(500).json({ error: 'Failed to create movie' });
+        return res.status(500).json({ error: 'Failed to create movie' });
     }
 };
 exports.createMovie = createMovie;
@@ -209,14 +209,14 @@ const updateMovie = async (req, res) => {
                 createdAt: true,
             },
         });
-        res.json(movie);
+        return res.json(movie);
     }
     catch (error) {
         console.error('Error updating movie:', error);
         if (error instanceof Error && error.message.includes('Record to update not found')) {
             return res.status(404).json({ error: 'Movie not found' });
         }
-        res.status(500).json({ error: 'Failed to update movie' });
+        return res.status(500).json({ error: 'Failed to update movie' });
     }
 };
 exports.updateMovie = updateMovie;
@@ -235,18 +235,18 @@ const deleteMovie = async (req, res) => {
         await prisma.movie.delete({
             where: { id },
         });
-        res.status(204).send();
+        return res.status(204).send();
     }
     catch (error) {
         console.error('Error deleting movie:', error);
         if (error instanceof Error && error.message.includes('Record to delete not found')) {
             return res.status(404).json({ error: 'Movie not found' });
         }
-        res.status(500).json({ error: 'Failed to delete movie' });
+        return res.status(500).json({ error: 'Failed to delete movie' });
     }
 };
 exports.deleteMovie = deleteMovie;
-const getMovieStats = async (req, res) => {
+const getMovieStats = async (_req, res) => {
     try {
         const [aggregateStats, yearlyCounts, ratingStats] = await Promise.all([
             prisma.movie.aggregate({
@@ -296,7 +296,7 @@ const getMovieStats = async (req, res) => {
         const averageRating = ratingStats.length > 0
             ? ratingStats.reduce((sum, stat) => sum + (stat._avg.rating || 0), 0) / ratingStats.length
             : 0;
-        res.json({
+        return res.json({
             overall: {
                 totalMovies: aggregateStats._count.id,
                 averageWatchedYear: aggregateStats._avg.watchedYear ? aggregateStats._avg.watchedYear.toFixed(0) : "0",
@@ -313,8 +313,103 @@ const getMovieStats = async (req, res) => {
     }
     catch (error) {
         console.error('Error fetching movie stats:', error);
-        res.status(500).json({ error: 'Failed to fetch movie statistics' });
+        return res.status(500).json({ error: 'Failed to fetch movie statistics' });
     }
 };
 exports.getMovieStats = getMovieStats;
+const getUnratedMovies = async (req, res) => {
+    try {
+        const { year } = req.params;
+        const userId = req.headers['x-user-id'];
+        if (!year) {
+            return res.status(400).json({ error: 'Year parameter is required' });
+        }
+        const watchedYear = parseInt(year);
+        const allMovies = await prisma.movie.findMany({
+            where: { watchedYear },
+            select: {
+                id: true,
+                title: true,
+                year: true,
+                posterUrl: true,
+                watchedYear: true,
+            },
+            orderBy: { title: 'asc' },
+        });
+        if (userId) {
+            const userRankings = await prisma.ranking.findMany({
+                where: {
+                    userId,
+                },
+                select: { movieId: true },
+            });
+            const ratedMovieIds = new Set(userRankings.map(r => r.movieId));
+            const unratedMovies = allMovies.filter(movie => !ratedMovieIds.has(movie.id));
+            return res.json({
+                year: watchedYear,
+                totalMovies: allMovies.length,
+                unratedCount: unratedMovies.length,
+                movies: unratedMovies,
+            });
+        }
+        return res.json({
+            year: watchedYear,
+            totalMovies: allMovies.length,
+            unratedCount: 0,
+            movies: [],
+        });
+    }
+    catch (error) {
+        console.error('Error fetching unrated movies:', error);
+        return res.status(500).json({ error: 'Failed to fetch unrated movies' });
+    }
+};
+exports.getUnratedMovies = getUnratedMovies;
+const updateMovieMetadata = async (req, res) => {
+    try {
+        const { movieIds, metadata } = req.body;
+        const BATCH_SIZE = 10;
+        const results = [];
+        const errors = [];
+        for (let i = 0; i < movieIds.length; i += BATCH_SIZE) {
+            const batch = movieIds.slice(i, i + BATCH_SIZE);
+            try {
+                const updateResult = await prisma.movie.updateMany({
+                    where: {
+                        id: {
+                            in: batch
+                        }
+                    },
+                    data: metadata
+                });
+                results.push({
+                    batch: batch,
+                    updatedCount: updateResult.count
+                });
+                if (i + BATCH_SIZE < movieIds.length) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+            }
+            catch (error) {
+                console.error(`Error updating batch ${i / BATCH_SIZE + 1}:`, error);
+                errors.push({
+                    batch: batch,
+                    error: error instanceof Error ? error.message : 'Unknown error'
+                });
+            }
+        }
+        return res.json({
+            success: true,
+            totalMovies: movieIds.length,
+            results,
+            errors: errors.length > 0 ? errors : undefined,
+            message: `Updated metadata for ${movieIds.length} movies`
+        });
+    }
+    catch (error) {
+        console.error('Error updating movie metadata:', error);
+        return res.status(500).json({ error: 'Failed to update movie metadata' });
+    }
+};
+exports.updateMovieMetadata = updateMovieMetadata;
 //# sourceMappingURL=movieController.js.map

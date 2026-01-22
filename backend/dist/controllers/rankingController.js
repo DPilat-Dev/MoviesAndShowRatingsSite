@@ -53,7 +53,7 @@ const getRankings = async (req, res) => {
             }),
             prisma.ranking.count({ where }),
         ]);
-        res.json({
+        return res.json({
             data: rankings,
             pagination: {
                 page: Number(page),
@@ -65,7 +65,7 @@ const getRankings = async (req, res) => {
     }
     catch (error) {
         console.error('Error fetching rankings:', error);
-        res.status(500).json({ error: 'Failed to fetch rankings' });
+        return res.status(500).json({ error: 'Failed to fetch rankings' });
     }
 };
 exports.getRankings = getRankings;
@@ -95,11 +95,11 @@ const getRankingById = async (req, res) => {
         if (!ranking) {
             return res.status(404).json({ error: 'Ranking not found' });
         }
-        res.json(ranking);
+        return res.json(ranking);
     }
     catch (error) {
         console.error('Error fetching ranking:', error);
-        res.status(500).json({ error: 'Failed to fetch ranking' });
+        return res.status(500).json({ error: 'Failed to fetch ranking' });
     }
 };
 exports.getRankingById = getRankingById;
@@ -159,11 +159,11 @@ const createRanking = async (req, res) => {
                 },
             },
         });
-        res.status(201).json(ranking);
+        return res.status(201).json(ranking);
     }
     catch (error) {
         console.error('Error creating ranking:', error);
-        res.status(500).json({ error: 'Failed to create ranking' });
+        return res.status(500).json({ error: 'Failed to create ranking' });
     }
 };
 exports.createRanking = createRanking;
@@ -195,14 +195,14 @@ const updateRanking = async (req, res) => {
                 },
             },
         });
-        res.json(ranking);
+        return res.json(ranking);
     }
     catch (error) {
         console.error('Error updating ranking:', error);
         if (error instanceof Error && error.message.includes('Record to update not found')) {
             return res.status(404).json({ error: 'Ranking not found' });
         }
-        res.status(500).json({ error: 'Failed to update ranking' });
+        return res.status(500).json({ error: 'Failed to update ranking' });
     }
 };
 exports.updateRanking = updateRanking;
@@ -212,14 +212,14 @@ const deleteRanking = async (req, res) => {
         await prisma.ranking.delete({
             where: { id },
         });
-        res.status(204).send();
+        return res.status(204).send();
     }
     catch (error) {
         console.error('Error deleting ranking:', error);
         if (error instanceof Error && error.message.includes('Record to delete not found')) {
             return res.status(404).json({ error: 'Ranking not found' });
         }
-        res.status(500).json({ error: 'Failed to delete ranking' });
+        return res.status(500).json({ error: 'Failed to delete ranking' });
     }
 };
 exports.deleteRanking = deleteRanking;
@@ -277,17 +277,18 @@ const getRankingsByYear = async (req, res) => {
             }),
         ]);
         const topMovies = await prisma.$queryRaw `
-      SELECT 
+       SELECT 
         m.id,
         m.title,
         m.year,
         m.watched_year as watchedYear,
+        m.poster_url as posterUrl,
         CAST(AVG(r.rating) AS FLOAT) as averageRating,
         CAST(COUNT(r.id) AS INTEGER) as totalRankings
       FROM movies m
       JOIN rankings r ON m.id = r.movie_id
        WHERE m.watched_year = ${ranking_year}
-       GROUP BY m.id, m.title, m.year, m.watched_year
+       GROUP BY m.id, m.title, m.year, m.watched_year, m.poster_url
         HAVING COUNT(r.id) >= 1
        ORDER BY AVG(r.rating) DESC
        LIMIT 10
@@ -312,6 +313,7 @@ const getRankingsByYear = async (req, res) => {
             title: movie.title,
             year: movie.year,
             watchedYear: movie.watchedyear || movie.watchedYear,
+            posterUrl: movie.posterurl || movie.posterUrl || null,
             averageRating: Number(movie.averagerating || movie.averageRating || 0),
             totalRankings: Number(movie.totalrankings || movie.totalRankings || 0),
         })) : [];
@@ -322,7 +324,7 @@ const getRankingsByYear = async (req, res) => {
             totalRankings: Number(user.totalrankings || user.totalRankings || 0),
             averageRating: Number(user.averagerating || user.averageRating || 0),
         })) : [];
-        res.json({
+        return res.json({
             year: ranking_year,
             stats: {
                 totalRankings: Number(stats._count),
@@ -343,11 +345,11 @@ const getRankingsByYear = async (req, res) => {
     }
     catch (error) {
         console.error('Error fetching rankings by year:', error);
-        res.status(500).json({ error: 'Failed to fetch rankings by year' });
+        return res.status(500).json({ error: 'Failed to fetch rankings by year' });
     }
 };
 exports.getRankingsByYear = getRankingsByYear;
-const getYearlyStats = async (req, res) => {
+const getYearlyStats = async (_req, res) => {
     try {
         const moviesWithRankings = await prisma.movie.findMany({
             where: {
@@ -393,7 +395,7 @@ const getYearlyStats = async (req, res) => {
         const years = filteredStats.map(stat => stat.year);
         const minYear = years.length > 0 ? Math.min(...years) : new Date().getFullYear();
         const maxYear = years.length > 0 ? Math.max(...years) : new Date().getFullYear();
-        res.json({
+        return res.json({
             yearRange: {
                 min: minYear,
                 max: maxYear,
@@ -403,7 +405,7 @@ const getYearlyStats = async (req, res) => {
     }
     catch (error) {
         console.error('Error fetching yearly stats:', error);
-        res.status(500).json({ error: 'Failed to fetch yearly statistics' });
+        return res.status(500).json({ error: 'Failed to fetch yearly statistics' });
     }
 };
 exports.getYearlyStats = getYearlyStats;
@@ -443,11 +445,11 @@ const getUserMovieRanking = async (req, res) => {
                 message: `No ranking found for user ${userId}, movie ${movieId}, year ${ranking_year}`,
             });
         }
-        res.json(ranking);
+        return res.json(ranking);
     }
     catch (error) {
         console.error('Error fetching user movie ranking:', error);
-        res.status(500).json({ error: 'Failed to fetch ranking' });
+        return res.status(500).json({ error: 'Failed to fetch ranking' });
     }
 };
 exports.getUserMovieRanking = getUserMovieRanking;

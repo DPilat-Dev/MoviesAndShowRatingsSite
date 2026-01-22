@@ -93,9 +93,9 @@ const getUserById = async (req, res) => {
         }
         const userWithStats = {
             ...user,
-            totalRankings: user._count.rankings,
+            totalRankings: user._count?.rankings || 0,
         };
-        res.json(userWithStats);
+        return res.json(userWithStats);
     }
     catch (error) {
         console.error('Error fetching user:', error);
@@ -110,7 +110,17 @@ const createUser = async (req, res) => {
             where: { username: data.username },
         });
         if (existingUser) {
-            return res.status(409).json({ error: 'Username already exists' });
+            return res.status(409).json({
+                error: 'Username already exists',
+                existingUser: {
+                    id: existingUser.id,
+                    username: existingUser.username,
+                    displayName: existingUser.displayName,
+                    avatarUrl: existingUser.avatarUrl,
+                    isActive: existingUser.isActive,
+                    createdAt: existingUser.createdAt,
+                }
+            });
         }
         const user = await prisma.user.create({
             data: {
@@ -126,7 +136,7 @@ const createUser = async (req, res) => {
                 createdAt: true,
             },
         });
-        res.status(201).json(user);
+        return res.status(201).json(user);
     }
     catch (error) {
         console.error('Error creating user:', error);
@@ -158,7 +168,7 @@ const updateUser = async (req, res) => {
                 createdAt: true,
             },
         });
-        res.json(user);
+        return res.json(user);
     }
     catch (error) {
         console.error('Error updating user:', error);
@@ -189,7 +199,7 @@ const deleteUser = async (req, res) => {
         await prisma.user.delete({
             where: { id },
         });
-        res.status(204).send();
+        return res.status(204).send();
     }
     catch (error) {
         console.error('Error deleting user:', error);
@@ -246,11 +256,11 @@ const getUserStats = async (req, res) => {
                 averageRating: parseFloat(avgRating.toFixed(1)),
             };
         });
-        res.json({
+        return res.json({
             user,
             stats: {
                 totalRankings: averageRating._count,
-                averageRating: averageRating._avg.rating ? parseFloat(averageRating._avg.rating.toFixed(1)) : 0,
+                averageRating: averageRating._count && averageRating._count > 0 && averageRating._avg.rating ? parseFloat(averageRating._avg.rating.toFixed(1)) : null,
                 yearlyStats: yearlyStats.sort((a, b) => b.year - a.year),
             },
             recentRankings: rankings.slice(0, 10),
@@ -258,7 +268,7 @@ const getUserStats = async (req, res) => {
     }
     catch (error) {
         console.error('Error fetching user stats:', error);
-        res.status(500).json({ error: 'Failed to fetch user statistics' });
+        return res.status(500).json({ error: 'Failed to fetch user statistics' });
     }
 };
 exports.getUserStats = getUserStats;

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.rankingQuerySchema = exports.movieQuerySchema = exports.paginationSchema = exports.updateRankingSchema = exports.createRankingSchema = exports.updateMovieSchema = exports.createMovieSchema = exports.updateUserSchema = exports.createUserSchema = void 0;
+exports.rankingQuerySchema = exports.movieQuerySchema = exports.paginationSchema = exports.updateRankingSchema = exports.createRankingSchema = exports.bulkUpdateMovieSchema = exports.updateMovieSchema = exports.createMovieSchema = exports.updateUserSchema = exports.createUserSchema = void 0;
 const zod_1 = require("zod");
 exports.createUserSchema = zod_1.z.object({
     username: zod_1.z.string().min(3).max(50).regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
@@ -26,6 +26,16 @@ exports.updateMovieSchema = zod_1.z.object({
     description: zod_1.z.string().max(1000).optional(),
     posterUrl: zod_1.z.string().url().optional().or(zod_1.z.literal('')),
     watchedYear: zod_1.z.number().int().min(2000).max(new Date().getFullYear()).optional(),
+});
+exports.bulkUpdateMovieSchema = zod_1.z.object({
+    movieIds: zod_1.z.array(zod_1.z.string().min(1)).min(1),
+    metadata: zod_1.z.object({
+        description: zod_1.z.string().max(1000).optional(),
+        posterUrl: zod_1.z.string().url().optional().or(zod_1.z.literal('')),
+        year: zod_1.z.number().int().min(1900).max(new Date().getFullYear() + 5).optional(),
+    }).refine(data => Object.keys(data).length > 0, {
+        message: 'Metadata must contain at least one field to update'
+    })
 });
 exports.createRankingSchema = zod_1.z.object({
     userId: zod_1.z.string().min(1),

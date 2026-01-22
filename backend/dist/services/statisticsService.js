@@ -59,12 +59,13 @@ class StatisticsService {
         const topMoviesWithDetails = await Promise.all(topMovies.map(async (movie) => {
             const movieDetails = await prisma.movie.findUnique({
                 where: { id: movie.movieId },
-                select: { title: true, year: true },
+                select: { title: true, year: true, posterUrl: true },
             });
             return {
                 id: movie.movieId,
                 title: movieDetails?.title || 'Unknown',
                 year: movieDetails?.year || 0,
+                posterUrl: movieDetails?.posterUrl || null,
                 averageRating: movie._avg.rating || 0,
                 rankingCount: movie._count,
             };
@@ -74,10 +75,10 @@ class StatisticsService {
             where: { rankingYear: year },
             _count: true,
             _avg: { rating: true },
-            orderBy: { _count: 'desc' },
-            take: 10,
         });
-        const topUsersWithDetails = await Promise.all(topUsers.map(async (user) => {
+        topUsers.sort((a, b) => b._count - a._count);
+        const top10Users = topUsers.slice(0, 10);
+        const topUsersWithDetails = await Promise.all(top10Users.map(async (user) => {
             const userDetails = await prisma.user.findUnique({
                 where: { id: user.userId },
                 select: { username: true, displayName: true },
@@ -87,7 +88,7 @@ class StatisticsService {
                 username: userDetails?.username || 'Unknown',
                 displayName: userDetails?.displayName || 'Unknown',
                 rankingCount: user._count,
-                averageRating: user._avg.rating || 0,
+                averageRating: user._avg?.rating || 0,
             };
         }));
         return {

@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { PrismaClient } from '@prisma/client'
-import { CreateMovieInput, UpdateMovieInput, BulkUpdateMovieInput, MovieQueryInput, movieQuerySchema } from '../utils/validation'
+import { CreateMovieInput, UpdateMovieInput, BulkUpdateMovieInput, movieQuerySchema } from '../utils/validation'
 
 const prisma = new PrismaClient()
 
@@ -77,7 +77,7 @@ export const getMovies = async (req: Request, res: Response) => {
       }
     })
     
-    res.json({
+    return res.json({
        data: moviesWithStats,
        pagination: {
          page: Number(page),
@@ -86,10 +86,10 @@ export const getMovies = async (req: Request, res: Response) => {
          pages: Math.ceil(Number(total) / Number(limit)),
        },
      })
-  } catch (error) {
-    console.error('Error fetching movies:', error)
-    res.status(500).json({ error: 'Failed to fetch movies' })
-  }
+   } catch (error) {
+     console.error('Error fetching movies:', error)
+     return res.status(500).json({ error: 'Failed to fetch movies' })
+   }
 }
 
 export const getMovieById = async (req: Request, res: Response) => {
@@ -163,10 +163,10 @@ export const getMovieById = async (req: Request, res: Response) => {
       yearlyStats: yearlyStats.sort((a, b) => b.year - a.year),
     }
     
-    res.json(movieWithStats)
+    return res.json(movieWithStats)
   } catch (error) {
     console.error('Error fetching movie:', error)
-    res.status(500).json({ error: 'Failed to fetch movie' })
+    return res.status(500).json({ error: 'Failed to fetch movie' })
   }
 }
 
@@ -210,10 +210,10 @@ export const createMovie = async (req: Request, res: Response) => {
       },
     })
     
-    res.status(201).json(movie)
+    return res.status(201).json(movie)
   } catch (error) {
     console.error('Error creating movie:', error)
-    res.status(500).json({ error: 'Failed to create movie' })
+    return res.status(500).json({ error: 'Failed to create movie' })
   }
 }
 
@@ -237,7 +237,7 @@ export const updateMovie = async (req: Request, res: Response) => {
       },
     })
     
-    res.json(movie)
+    return res.json(movie)
   } catch (error) {
     console.error('Error updating movie:', error)
     
@@ -245,7 +245,7 @@ export const updateMovie = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Movie not found' })
     }
     
-    res.status(500).json({ error: 'Failed to update movie' })
+    return res.status(500).json({ error: 'Failed to update movie' })
   }
 }
 
@@ -269,7 +269,7 @@ export const deleteMovie = async (req: Request, res: Response) => {
       where: { id },
     })
     
-    res.status(204).send()
+    return res.status(204).send()
   } catch (error) {
     console.error('Error deleting movie:', error)
     
@@ -277,11 +277,11 @@ export const deleteMovie = async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Movie not found' })
     }
     
-    res.status(500).json({ error: 'Failed to delete movie' })
+    return res.status(500).json({ error: 'Failed to delete movie' })
   }
 }
 
-export const getMovieStats = async (req: Request, res: Response) => {
+export const getMovieStats = async (_req: Request, res: Response) => {
    try {
       // Use Prisma aggregate functions instead of raw SQL
       const [aggregateStats, yearlyCounts, ratingStats] = await Promise.all([
@@ -336,24 +336,24 @@ export const getMovieStats = async (req: Request, res: Response) => {
         ? ratingStats.reduce((sum, stat) => sum + (stat._avg.rating || 0), 0) / ratingStats.length
         : 0
       
-       res.json({
-        overall: {
-          totalMovies: aggregateStats._count.id,
-          averageWatchedYear: aggregateStats._avg.watchedYear ? aggregateStats._avg.watchedYear.toFixed(0) : "0",
-          oldestWatchedYear: aggregateStats._min.watchedYear || 0,
-          newestWatchedYear: aggregateStats._max.watchedYear || 0,
-          uniqueWatchedYears: uniqueWatchedYears,
-          averageRating: parseFloat(averageRating.toFixed(1)),
-        },
-        byWatchedYear: yearlyCounts.map(item => ({
-          year: item.watchedYear,
-          count: item._count.id,
-        })),
-      })
-   } catch (error) {
-    console.error('Error fetching movie stats:', error)
-    res.status(500).json({ error: 'Failed to fetch movie statistics' })
-  }
+        return res.json({
+         overall: {
+           totalMovies: aggregateStats._count.id,
+           averageWatchedYear: aggregateStats._avg.watchedYear ? aggregateStats._avg.watchedYear.toFixed(0) : "0",
+           oldestWatchedYear: aggregateStats._min.watchedYear || 0,
+           newestWatchedYear: aggregateStats._max.watchedYear || 0,
+           uniqueWatchedYears: uniqueWatchedYears,
+           averageRating: parseFloat(averageRating.toFixed(1)),
+         },
+         byWatchedYear: yearlyCounts.map(item => ({
+           year: item.watchedYear,
+           count: item._count.id,
+         })),
+       })
+    } catch (error) {
+     console.error('Error fetching movie stats:', error)
+     return res.status(500).json({ error: 'Failed to fetch movie statistics' })
+   }
 }
 
 export const getUnratedMovies = async (req: Request, res: Response) => {
@@ -403,7 +403,7 @@ export const getUnratedMovies = async (req: Request, res: Response) => {
     }
     
     // If no userId provided, return empty array (user not logged in)
-    res.json({
+    return res.json({
       year: watchedYear,
       totalMovies: allMovies.length,
       unratedCount: 0,
@@ -412,7 +412,7 @@ export const getUnratedMovies = async (req: Request, res: Response) => {
     
   } catch (error) {
     console.error('Error fetching unrated movies:', error)
-    res.status(500).json({ error: 'Failed to fetch unrated movies' })
+    return res.status(500).json({ error: 'Failed to fetch unrated movies' })
   }
 }
 
@@ -456,7 +456,7 @@ export const updateMovieMetadata = async (req: Request, res: Response) => {
       }
     }
     
-    res.json({
+    return res.json({
       success: true,
       totalMovies: movieIds.length,
       results,
@@ -466,6 +466,6 @@ export const updateMovieMetadata = async (req: Request, res: Response) => {
     
   } catch (error) {
     console.error('Error updating movie metadata:', error)
-    res.status(500).json({ error: 'Failed to update movie metadata' })
+    return res.status(500).json({ error: 'Failed to update movie metadata' })
   }
 }

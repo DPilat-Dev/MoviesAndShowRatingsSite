@@ -12,8 +12,8 @@ export const getUsers = async (req: Request, res: Response) => {
     
     const where = search ? {
       OR: [
-        { username: { contains: search as string, mode: 'insensitive' } },
-        { displayName: { contains: search as string, mode: 'insensitive' } },
+        { username: { contains: search as string, mode: 'insensitive' as any } },
+        { displayName: { contains: search as string, mode: 'insensitive' as any } },
       ],
     } : {}
     
@@ -101,10 +101,10 @@ export const getUserById = async (req: Request, res: Response) => {
     
     const userWithStats = {
       ...user,
-      totalRankings: user._count.rankings,
+      totalRankings: user._count?.rankings || 0,
     }
     
-    res.json(userWithStats)
+    return res.json(userWithStats)
   } catch (error) {
     console.error('Error fetching user:', error)
     return res.status(500).json({ error: 'Failed to fetch user' })
@@ -149,7 +149,7 @@ export const createUser = async (req: Request, res: Response) => {
       },
     })
     
-    res.status(201).json(user)
+    return res.status(201).json(user)
   } catch (error) {
     console.error('Error creating user:', error)
     return res.status(500).json({ error: 'Failed to create user' })
@@ -186,7 +186,7 @@ export const updateUser = async (req: Request, res: Response) => {
       },
     })
     
-    res.json(user)
+    return res.json(user)
   } catch (error) {
     console.error('Error updating user:', error)
     
@@ -223,7 +223,7 @@ export const deleteUser = async (req: Request, res: Response) => {
       where: { id },
     })
     
-    res.status(204).send()
+    return res.status(204).send()
   } catch (error) {
     console.error('Error deleting user:', error)
     
@@ -288,17 +288,17 @@ export const getUserStats = async (req: Request, res: Response) => {
       }
     })
     
-     res.json({
-       user,
-       stats: {
-         totalRankings: averageRating._count,
-         averageRating: averageRating._count && averageRating._count > 0 && averageRating._avg.rating ? parseFloat(averageRating._avg.rating.toFixed(1)) : null,
-         yearlyStats: yearlyStats.sort((a, b) => b.year - a.year),
-       },
-       recentRankings: rankings.slice(0, 10),
-     })
-  } catch (error) {
-    console.error('Error fetching user stats:', error)
-    res.status(500).json({ error: 'Failed to fetch user statistics' })
-  }
+      return res.json({
+        user,
+        stats: {
+          totalRankings: averageRating._count,
+          averageRating: averageRating._count && averageRating._count > 0 && averageRating._avg.rating ? parseFloat(averageRating._avg.rating.toFixed(1)) : null,
+          yearlyStats: yearlyStats.sort((a, b) => b.year - a.year),
+        },
+        recentRankings: rankings.slice(0, 10),
+      })
+   } catch (error) {
+     console.error('Error fetching user stats:', error)
+     return res.status(500).json({ error: 'Failed to fetch user statistics' })
+   }
 }

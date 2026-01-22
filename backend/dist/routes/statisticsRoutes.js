@@ -24,11 +24,11 @@ router.get('/year/:year', async (req, res) => {
             return res.status(400).json({ error: 'Invalid year' });
         }
         const stats = await statisticsService.getYearlyStats(year);
-        res.json(stats);
+        return res.json(stats);
     }
     catch (error) {
         console.error('Yearly stats error:', error);
-        res.status(500).json({ error: 'Failed to get yearly statistics' });
+        return res.status(500).json({ error: 'Failed to get yearly statistics' });
     }
 });
 router.get('/user/:userId', async (req, res) => {
@@ -77,9 +77,8 @@ router.get('/top-movies', async (req, res) => {
     try {
         const limit = req.query.limit ? parseInt(req.query.limit) : 10;
         const year = req.query.year ? parseInt(req.query.year) : undefined;
-        const where = year ? { rankingYear: year } : {};
         const topMovies = await statisticsService.getOverallStats();
-        res.json({
+        return res.json({
             topMovies: topMovies.yearlyStats.flatMap(yearStats => yearStats.topMovies)
                 .sort((a, b) => b.averageRating - a.averageRating)
                 .slice(0, limit),
@@ -89,7 +88,7 @@ router.get('/top-movies', async (req, res) => {
     }
     catch (error) {
         console.error('Top movies error:', error);
-        res.status(500).json({ error: 'Failed to get top movies' });
+        return res.status(500).json({ error: 'Failed to get top movies' });
     }
 });
 router.get('/top-users', async (req, res) => {

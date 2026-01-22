@@ -173,18 +173,20 @@ class StatisticsService {
       })
     );
 
-    // Get top users for the year
+     // Get top users for the year
     const topUsers = await prisma.ranking.groupBy({
       by: ['userId'],
       where: { rankingYear: year },
       _count: true,
       _avg: { rating: true },
-      orderBy: { _count: 'desc' },
-      take: 10,
     });
 
-    const topUsersWithDetails = await Promise.all(
-      topUsers.map(async (user) => {
+    // Sort by count descending
+    topUsers.sort((a, b) => b._count - a._count);
+    const top10Users = topUsers.slice(0, 10);
+
+     const topUsersWithDetails = await Promise.all(
+       top10Users.map(async (user) => {
         const userDetails = await prisma.user.findUnique({
           where: { id: user.userId },
           select: { username: true, displayName: true },
@@ -194,8 +196,8 @@ class StatisticsService {
           id: user.userId,
           username: userDetails?.username || 'Unknown',
           displayName: userDetails?.displayName || 'Unknown',
-          rankingCount: user._count,
-          averageRating: user._avg.rating || 0,
+          rankingCount: user._count as number,
+          averageRating: user._avg?.rating || 0,
         };
       })
     );

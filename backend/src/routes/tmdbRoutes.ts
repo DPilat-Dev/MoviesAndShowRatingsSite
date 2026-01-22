@@ -30,13 +30,13 @@ router.get('/search', async (req, res) => {
       voteCount: movie.vote_count,
     }));
     
-    res.json({
+    return res.json({
       results: formattedResults,
       total: movies.length,
     });
   } catch (error) {
     console.error('TMDB search API error:', error);
-    res.status(500).json({ error: 'Failed to search movies' });
+    return res.status(500).json({ error: 'Failed to search movies' });
   }
 });
 
@@ -81,10 +81,10 @@ router.get('/movie/:id', async (req, res) => {
       homepage: movieDetails.homepage,
     };
     
-    res.json(formattedMovie);
+    return res.json(formattedMovie);
   } catch (error) {
     console.error('TMDB movie details API error:', error);
-    res.status(500).json({ error: 'Failed to get movie details' });
+    return res.status(500).json({ error: 'Failed to get movie details' });
   }
 });
 
@@ -129,10 +129,10 @@ router.get('/match', async (req, res) => {
       tagline: movieDetails.tagline,
     };
     
-    res.json(formattedMovie);
+    return res.json(formattedMovie);
   } catch (error) {
     console.error('TMDB match API error:', error);
-    res.status(500).json({ error: 'Failed to match movie' });
+    return res.status(500).json({ error: 'Failed to match movie' });
   }
 });
 
@@ -174,14 +174,14 @@ router.post('/import', async (req, res) => {
     
     // Note: In a real implementation, you would save this to your database here
     // For now, we'll just return the formatted data
-    res.json({
+    return res.json({
       message: 'Movie ready for import',
       movie: movieData,
       source: 'tmdb',
     });
   } catch (error) {
     console.error('TMDB import API error:', error);
-    res.status(500).json({ error: 'Failed to import movie from TMDB' });
+    return res.status(500).json({ error: 'Failed to import movie from TMDB' });
   }
 });
 
