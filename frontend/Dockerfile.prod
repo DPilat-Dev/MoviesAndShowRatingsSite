@@ -11,7 +11,19 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build application
+# Build arguments for environment variables
+ARG VITE_API_URL=http://localhost:5000
+ARG VITE_OMDB_API_KEY
+ARG VITE_APP_NAME="Bosnia Movie Rankings"
+ARG VITE_ENABLE_DARK_MODE=true
+
+# Set environment variables for build
+ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_OMDB_API_KEY=${VITE_OMDB_API_KEY}
+ENV VITE_APP_NAME=${VITE_APP_NAME}
+ENV VITE_ENABLE_DARK_MODE=${VITE_ENABLE_DARK_MODE}
+
+# Build application with environment variables
 RUN npm run build
 
 # Install serve to run the built app
