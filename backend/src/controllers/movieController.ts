@@ -402,12 +402,12 @@ export const getUnratedMovies = async (req: Request, res: Response) => {
       })
     }
     
-    // If no userId provided, return empty array (user not logged in)
+    // If no userId provided, return all movies (for demo/initial load)
     return res.json({
       year: watchedYear,
       totalMovies: allMovies.length,
-      unratedCount: 0,
-      movies: [],
+      unratedCount: allMovies.length,
+      movies: allMovies,
     })
     
   } catch (error) {
