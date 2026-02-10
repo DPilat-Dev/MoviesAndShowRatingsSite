@@ -116,10 +116,11 @@ export default function Dashboard() {
         setUnratedMovies(unratedRes.data.movies.slice(0, 5))
       }
 
-       // Get years from rankings (years with rankings)
-       const yearsWithRankings = yearlyOverviewRes.data.yearlyStats
-         .filter((stat: YearlyStat) => stat.totalRankings > 0)
-         .map((stat: YearlyStat) => stat.year)
+        // Get years from rankings (years with rankings)
+        const yearsWithRankings = yearlyOverviewRes.data?.yearlyStats 
+          ? yearlyOverviewRes.data.yearlyStats.filter((stat: YearlyStat) => stat.totalRankings > 0)
+            .map((stat: YearlyStat) => stat.year)
+          : []
        
        // Get years from movies (years with movies watched)
        const movies = allMoviesRes.data.data || []

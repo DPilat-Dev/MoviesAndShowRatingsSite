@@ -45,7 +45,7 @@ services:
       dockerfile: Dockerfile.prod
       args:
         VITE_API_URL: ${VITE_API_URL:-http://localhost:5000}
-        VITE_OMDB_API_KEY: ${VITE_OMDB_API_KEY:-"f4b35707"}
+        VITE_OMDB_API_KEY: ${VITE_OMDB_API_KEY:-f4b35707}
         VITE_APP_NAME: ${VITE_APP_NAME:-"Bosnia Movie Rankings"}
         VITE_ENABLE_DARK_MODE: ${VITE_ENABLE_DARK_MODE:-"true"}
     container_name: bosnia-movie-frontend-prod
@@ -54,6 +54,9 @@ services:
     ports:
       - "3000:3000"
     restart: unless-stopped
+    # Override config.js at runtime if needed
+    volumes:
+      - ./frontend/public/config.js:/app/dist/config.js:ro
 
 volumes:
   postgres_data_prod:

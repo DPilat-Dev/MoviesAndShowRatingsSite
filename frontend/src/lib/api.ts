@@ -11,8 +11,18 @@ declare module 'axios' {
   }
 }
 
+// Try to get API URL from window config or environment
+const getApiBaseUrl = () => {
+  // Check if we're in a browser and have a config (runtime configuration)
+  if (typeof window !== 'undefined' && (window as any).APP_CONFIG?.apiUrl) {
+    return (window as any).APP_CONFIG.apiUrl;
+  }
+  // Use environment variable (set at build time) as fallback
+  return import.meta.env.VITE_API_URL || '/api';
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || '/api',
+  baseURL: getApiBaseUrl(),
   headers: {
     'Content-Type': 'application/json',
   },
