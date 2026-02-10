@@ -83,11 +83,7 @@ backend/.env.*.local
 # ============================================
 
 # Never commit .env files with secrets
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+
 
 # But keep .env.example files (template)
 !.env.example
