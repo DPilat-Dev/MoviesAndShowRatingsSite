@@ -21,7 +21,23 @@ const PORT = process.env.PORT || 5000;
 // Temporarily disable helmet for CORS debugging
 // app.use(helmet());
 app.use(cors({
-  origin: '*', // Allow all origins for debugging
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:5173',
+      'https://bosniaranking.lonercorp.com',
+      'https://apibosniaranking.lonercorp.com'
+    ];
+    
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true,
 }));
 app.use(express.json());

@@ -355,8 +355,8 @@ const getUnratedMovies = async (req, res) => {
         return res.json({
             year: watchedYear,
             totalMovies: allMovies.length,
-            unratedCount: 0,
-            movies: [],
+            unratedCount: allMovies.length,
+            movies: allMovies,
         });
     }
     catch (error) {
